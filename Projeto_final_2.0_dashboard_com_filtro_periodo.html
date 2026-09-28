@@ -1,0 +1,2120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Escala Expedição T2 - AI Brain & Autenticação Cloud</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome para ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js para o Gráfico 2D -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;900&family=Fira+Code:wght@300;400;500&display=swap');
+        
+        body { 
+            font-family: 'Poppins', sans-serif; 
+            background-color: #f8fafc; 
+            color: #334155;
+            margin: 0;
+            overflow: hidden; 
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        
+        /* Sistema de Abas */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeInSoft 0.4s ease-out; }
+        @keyframes fadeInSoft { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Soft Shadows para os Cards */
+        .card-soft {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            border: 1px solid rgba(226, 232, 240, 0.5);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        @media (min-width: 768px) {
+            .card-soft:hover { transform: translateY(-2px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.02); }
+        }
+
+        /* Toasts */
+        #toast-container { position: fixed; bottom: 80px; right: 20px; z-index: 99999; }
+        @media (min-width: 768px) { #toast-container { bottom: 30px; right: 30px; } }
+        .toast { padding: 16px 24px; border-radius: 12px; color: white; margin-top: 12px; display: flex; align-items: center; gap: 12px; opacity: 0; transform: translateY(30px); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); font-weight: 500; }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast.success { background: linear-gradient(135deg, #10b981, #059669); }
+        .toast.error { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .toast.warning { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .auth-btn-loading { opacity: .75; cursor: wait; pointer-events: none; }
+        .auth-btn-loading i { animation: spinAuth .8s linear infinite; }
+        @keyframes spinAuth { to { transform: rotate(360deg); } }
+
+        /* Custom scrollbar suave */
+        .colab-list { max-height: 250px; overflow-y: auto; padding-right: 5px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Checkboxes Personalizados */
+        .checkbox-container { display: flex; align-items: center; padding: 12px 12px; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; margin-bottom: 2px; }
+        @media (min-width: 768px) { .checkbox-container { padding: 8px 12px; } }
+        .checkbox-container:hover { background: #f8fafc; }
+        .checkbox-container input { display: none; }
+        .checkmark { width: 24px; height: 24px; border: 2px solid #cbd5e1; border-radius: 6px; margin-right: 12px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; background: white; flex-shrink: 0; }
+        .checkbox-container input:checked + .checkmark { background: #3b82f6; border-color: #3b82f6; transform: scale(1.05); }
+        .checkbox-container input:checked + .checkmark::after { content: '✓'; color: white; font-weight: bold; font-size: 14px; }
+        .colab-row.selected { background-color: #eff6ff; border-left: 3px solid #3b82f6; padding-left: 9px; }
+
+        #container-grafico { height: 520px; width: 100%; margin-top: 20px; position: relative; }
+        @media (min-width: 768px) { #container-grafico { height: 600px; } }
+        
+        .menu-item.active { background: linear-gradient(90deg, #2563eb, #1d4ed8); color: white; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2); }
+        .bottom-nav-item { color: #94a3b8; transition: all 0.3s ease; }
+        .bottom-nav-item.active { color: #2563eb; transform: translateY(-2px); }
+        .bottom-nav-item.active i { background-color: #eff6ff; padding: 8px; border-radius: 12px; }
+        
+        .fab-button { position: fixed; bottom: 80px; right: 20px; z-index: 40; background: linear-gradient(135deg, #2563eb, #4f46e5); color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 20px rgba(37, 99, 235, 0.4); font-size: 24px; transition: transform 0.2s; }
+        .fab-button:active { transform: scale(0.9); }
+
+        /* ==================== TELA DE LOADING (CÉREBRO IA) ==================== */
+        #main-app, #auth-screen { display: none; opacity: 0; transition: opacity 0.8s ease-in-out; }
+        
+        #intro-screen {
+            position: fixed; inset: 0; z-index: 1000; 
+            background: #00050d;
+            display: flex; flex-direction: column; justify-content: space-between; align-items: center;
+            transition: opacity 1s ease-in-out; overflow: hidden;
+            padding: 40px 0;
+            cursor: crosshair; 
+        }
+
+        #ai-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; touch-action: none; }
+
+        .intro-header { position: relative; z-index: 10; text-align: center; margin-top: 5vh; pointer-events: none; }
+        .intro-footer { position: relative; z-index: 10; text-align: center; width: 100%; display: flex; flex-direction: column; align-items: center; margin-bottom: 3vh; pointer-events: none; }
+
+        .glow-title {
+            font-size: 3rem; font-weight: 900; letter-spacing: 0.15em;
+            background: linear-gradient(to right, #ffffff, #00d2ff, #3a7bd5);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-transform: uppercase;
+            filter: drop-shadow(0 0 25px rgba(0, 210, 255, 0.8)); animation: pulseText 2.5s infinite alternate;
+        }
+        @media (min-width: 768px) { .glow-title { font-size: 4.5rem; } }
+        
+        .glow-subtitle { font-size: 1.2rem; font-weight: 300; color: #bae6fd; letter-spacing: 0.5em; text-transform: uppercase; margin-top: -5px; opacity: 0.9; }
+
+        @keyframes pulseText { 0% { filter: drop-shadow(0 0 10px rgba(0, 210, 255, 0.5)); } 100% { filter: drop-shadow(0 0 35px rgba(0, 210, 255, 1)); } }
+
+        .progress-bar-container { width: 280px; height: 5px; background-color: rgba(0, 210, 255, 0.1); border-radius: 10px; overflow: hidden; margin-top: 15px; margin-bottom: 5px; box-shadow: 0 0 15px rgba(0, 210, 255, 0.3); border: 1px solid rgba(0, 210, 255, 0.2); }
+        @media (min-width: 768px) { .progress-bar-container { width: 400px; height: 6px; } }
+        
+        .progress-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #0052d4, #4364f7, #6fb1fc); background-size: 200% 100%; border-radius: 10px; transition: width 0.1s linear; animation: slideBg 1.5s linear infinite; box-shadow: 0 0 20px #00d2ff; }
+        @keyframes slideBg { 0% { background-position: 0% 0; } 100% { background-position: 200% 0; } }
+
+        /* Estilização Seleção de Escala */
+        .escala-radio:checked + label {
+            background-color: #2563eb;
+            color: #ffffff;
+            border-color: #2563eb;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        /* ===== RESPONSIVIDADE ===== */
+        html { width:100%; min-height:100%; -webkit-text-size-adjust:100%; }
+        *, *::before, *::after { box-sizing:border-box; }
+        button, input, select, textarea { font:inherit; }
+        button { touch-action:manipulation; }
+        .pb-safe { padding-bottom:max(.5rem, env(safe-area-inset-bottom)); }
+        #intro-screen { width:100vw; height:100dvh; min-height:100svh; padding-top:max(24px,env(safe-area-inset-top)); padding-bottom:max(18px,env(safe-area-inset-bottom)); }
+        #ai-canvas { width:100%; height:100%; display:block; }
+        .intro-header { width:min(94vw,1000px); margin-top:clamp(20px,7vh,70px); }
+        .intro-footer { width:min(94vw,760px); margin-bottom:clamp(8px,3vh,32px); }
+        .glow-title { font-size:clamp(2rem,8vw,4.5rem); line-height:1; letter-spacing:clamp(.08em,1.5vw,.15em); white-space:nowrap; }
+        .glow-subtitle { font-size:clamp(.72rem,2.7vw,1.2rem); letter-spacing:clamp(.22em,1.4vw,.5em); margin-top:clamp(4px,.8vh,8px); }
+        .progress-bar-container { width:min(82vw,400px); height:clamp(4px,.7vw,6px); }
+        #main-app { width:100%; min-width:0; height:100dvh; }
+        main { min-width:0; }
+        main > header { min-height:68px; }
+        .colab-list { overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
+
+        @media (max-height: 800px) {
+            #intro-screen { padding: 15px 0; }
+            .intro-header { margin-top: 2vh !important; }
+            .intro-footer { margin-bottom: 2vh !important; }
+            .glow-title { font-size: 3rem !important; }
+            .glow-subtitle { font-size: 0.9rem !important; letter-spacing: 0.3em; margin-top: 0px; }
+            .progress-bar-container { margin-top: 5px; margin-bottom: 5px; height: 4px; }
+            .text-cyan-100.font-mono { margin-bottom: 5px; font-size: 1.25rem; }
+            #container-grafico { height: 300px; }
+        }
+
+        .tutorial-visual { min-height:190px; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+        .tutorial-visual svg { width:100%; max-width:390px; height:auto; filter:drop-shadow(0 12px 28px rgba(0,0,0,.25)); }
+        .tutorial-dot { width:7px; height:7px; border-radius:999px; background:rgba(255,255,255,.25); transition:all .25s; }
+        .tutorial-dot.active { width:22px; background:#22d3ee; }
+        .tutorial-step { display:flex; gap:12px; align-items:flex-start; padding:11px 12px; border:1px solid #e2e8f0; border-radius:14px; background:#f8fafc; }
+        .tutorial-step-num { width:26px; height:26px; flex:0 0 26px; border-radius:99px; display:flex; align-items:center; justify-content:center; background:#dbeafe; color:#2563eb; font-size:11px; font-weight:900; }
+        @media(max-width:1023px){ .tutorial-visual{min-height:150px;} }
+    </style>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+    <script>
+    (function () {
+        const firebaseConfig = {
+            apiKey: "AIzaSyBC5JhD2cW983P1VZf5TkrhM8B7Wiyxtt0",
+            authDomain: "sistema-escala-b337d.firebaseapp.com",
+            projectId: "sistema-escala-b337d",
+            storageBucket: "sistema-escala-b337d.firebasestorage.app",
+            messagingSenderId: "184432909124",
+            appId: "1:184432909124:web:cb8a894de67a48c3add511"
+        };
+
+        try {
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+
+            const auth = firebase.auth();
+            const db = firebase.firestore();
+
+            window.firestorePersistenceReady = db.enablePersistence({ synchronizeTabs: true })
+                .catch((error) => {
+                    console.warn('Cache persistente do Firestore não pôde ser ativado:', error);
+                });
+
+            window.firebasePersistenceReady = auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+                .catch((error) => console.warn('Persistência local do Firebase não pôde ser configurada:', error));
+
+            window.firebaseApp = firebase.app();
+            window.firebaseAuth = auth;
+            window.firebaseDb = db;
+            window.firebaseReady = true;
+
+            window.firebaseCreateUserWithEmailAndPassword =
+                (authInstance, email, password) =>
+                    authInstance.createUserWithEmailAndPassword(email, password);
+
+            window.firebaseSignInWithEmailAndPassword =
+                (authInstance, email, password) =>
+                    authInstance.signInWithEmailAndPassword(email, password);
+
+            window.firebaseSignOut =
+                (authInstance) => authInstance.signOut();
+
+            window.firebaseDoc =
+                (dbInstance, collection, id) => dbInstance.collection(collection).doc(id);
+
+            window.firebaseGetDoc =
+                (docRef) => docRef.get();
+
+            window.firebaseSetDoc =
+                (docRef, data, options) => docRef.set(data, options || {});
+
+            window.firebaseOnSnapshot =
+                (docRef, onNext, onError) => docRef.onSnapshot(onNext, onError);
+
+            window.firebaseServerTimestamp =
+                () => firebase.firestore.FieldValue.serverTimestamp();
+
+            window.firebaseAuthReady = new Promise((resolve) => {
+                let resolvida = false;
+                auth.onAuthStateChanged((user) => {
+                    if (user) {
+                        window.currentUserUid = user.uid;
+                        window.firebaseCurrentUser = user;
+                    } else {
+                        window.currentUserUid = null;
+                        window.firebaseCurrentUser = null;
+                    }
+
+                    if (!resolvida) {
+                        resolvida = true;
+                        resolve(user || null);
+                    }
+                });
+            });
+
+            console.log("Firebase inicializado corretamente:", firebaseConfig.projectId);
+        } catch (error) {
+            window.firebaseReady = false;
+            console.error("Erro ao inicializar Firebase:", error);
+        }
+    })();
+    </script>
+</head>
+<body>
+
+    <!-- TELA DE LOADING -->
+    <div id="intro-screen">
+        <canvas id="ai-canvas"></canvas>
+        <div class="intro-header">
+            <h1 class="glow-title">EXPEDIÇÃO</h1>
+            <h2 class="glow-subtitle">SISTEMA T2</h2>
+        </div>
+        <div class="intro-footer">
+            <p class="text-cyan-300 text-[10px] md:text-xs font-medium tracking-[0.2em] md:tracking-[0.3em] uppercase animate-pulse drop-shadow-md">Carregando Inteligência Artificial...</p>
+            <div class="progress-bar-container"><div id="loading-bar" class="progress-bar-fill"></div></div>
+            <div class="text-cyan-100 font-mono text-xl md:text-2xl font-bold tracking-widest drop-shadow-[0_0_15px_rgba(0,210,255,0.9)] mb-8"><span id="loading-percent">0</span>%</div>
+            <p class="text-cyan-600 text-[9px] uppercase tracking-[0.4em] mb-2 font-semibold">Desenvolvido por</p>
+            <p class="text-white text-xs md:text-sm font-semibold tracking-[0.1em] md:tracking-[0.2em] uppercase flex items-center gap-2 bg-[#021124] px-5 py-2.5 rounded-full border border-cyan-500/50 shadow-[0_0_20px_rgba(0,210,255,0.3)] pointer-events-auto">
+                <i class="fa-solid fa-code text-cyan-400"></i> Developer <span class="text-cyan-300 font-bold">Rodrigo de Jesus</span>
+            </p>
+        </div>
+    </div>
+
+    <!-- TELA DE SESSÃO -->
+    <div id="session-loading-screen" class="fixed inset-0 z-[1200] bg-slate-950 hidden items-center justify-center p-3 md:p-6 overflow-y-auto">
+        <div class="w-full max-w-6xl bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-slate-200 grid lg:grid-cols-[0.9fr_1.1fr]">
+            <div class="bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-950 text-white p-5 md:p-8 flex flex-col justify-between min-h-[520px]">
+                <div>
+                    <div class="flex items-center gap-3 mb-5">
+                        <div class="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center"><i class="fa-solid fa-cloud-arrow-down text-xl text-cyan-300 animate-pulse"></i></div>
+                        <div>
+                            <p class="text-[10px] uppercase tracking-[0.25em] text-cyan-300 font-bold">Expedição T2 Cloud</p>
+                            <h3 class="text-xl font-black">Preparando seu ambiente</h3>
+                        </div>
+                    </div>
+                    <p id="session-loading-name" class="text-sm font-bold text-white truncate">Aguarde um momento</p>
+                    <p id="session-loading-status" class="text-xs text-slate-300 mt-1">Carregando os dados da sua conta...</p>
+                    <div class="mt-5 h-2 bg-white/10 rounded-full overflow-hidden border border-white/10">
+                        <div id="session-loading-bar" class="h-full w-0 bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 rounded-full transition-[width] duration-150"></div>
+                    </div>
+                    <div class="mt-3 flex items-center justify-between text-[11px] font-semibold text-slate-300">
+                        <span><span id="session-loading-percent">0</span>%</span>
+                        <span id="session-loading-estimate">Sincronizando...</span>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <div>
+                            <p class="text-[10px] uppercase tracking-[0.22em] text-cyan-300 font-bold">Tutorial rápido</p>
+                            <p id="tutorial-counter" class="text-xs text-slate-300">1 de 6</p>
+                        </div>
+                        <div class="flex gap-1.5" id="tutorial-dots"></div>
+                    </div>
+                    <div id="tutorial-visual" class="tutorial-visual rounded-2xl border border-white/10 bg-white/5 p-4"></div>
+                </div>
+            </div>
+            <div class="p-5 md:p-8 flex flex-col justify-center">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100"><i class="fa-solid fa-circle-info"></i></div>
+                    <div>
+                        <h3 id="tutorial-title" class="text-xl font-black text-slate-800">Lançar Escala</h3>
+                        <p id="tutorial-description" class="text-xs text-slate-500 mt-1">Veja como usar esta função.</p>
+                    </div>
+                </div>
+                <div id="tutorial-steps" class="space-y-3"></div>
+                <div class="mt-6 grid grid-cols-2 gap-3">
+                    <div class="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                        <p class="text-[9px] uppercase font-bold tracking-wider text-slate-400">Conta</p>
+                        <p class="text-xs font-bold text-slate-700 mt-1 truncate" id="session-loading-account">Verificando...</p>
+                    </div>
+                    <div class="rounded-xl bg-emerald-50 border border-emerald-100 p-3">
+                        <p class="text-[9px] uppercase font-bold tracking-wider text-emerald-600">Sincronização</p>
+                        <p class="text-xs font-bold text-emerald-700 mt-1" id="session-sync-state">Conectando...</p>
+                    </div>
+                </div>
+                <p class="text-[10px] text-slate-400 mt-5 text-center">Seus dados são carregados pelo UID da conta atual.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- TELA DE LOGIN / REGISTRO -->
+    <div id="auth-screen" class="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center p-4 overflow-y-auto">
+        <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden my-auto border border-slate-100">
+            <div class="bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 p-8 text-center text-white relative">
+                <div class="inline-flex p-3 bg-blue-600/20 rounded-2xl mb-3 border border-blue-400/30"><i class="fa-solid fa-boxes-stacked text-3xl text-blue-400"></i></div>
+                <h2 class="text-2xl font-black tracking-wide">EXPEDIÇÃO T2</h2>
+                <p class="text-xs text-blue-300 font-medium tracking-widest uppercase mt-1">Acesso Cloud Netlify & Sync</p>
+            </div>
+            <div id="form-login" class="p-6 md:p-8 space-y-5">
+                <div class="text-center mb-2"><h3 class="text-xl font-bold text-slate-800">Seja Bem-vindo(a)</h3><p class="text-xs text-slate-500 mt-1">Informe suas credenciais para continuar</p></div>
+                <div><label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">E-mail</label><div class="relative"><i class="fa-solid fa-user absolute left-4 top-3.5 text-slate-400"></i><input type="email" id="login-usuario" autocomplete="email" placeholder="seuemail@exemplo.com" class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-500 transition-colors"></div></div>
+                <div><label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Senha</label><div class="relative"><i class="fa-solid fa-lock absolute left-4 top-3.5 text-slate-400"></i><input type="password" id="login-senha" autocomplete="current-password" placeholder="••••••••" class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-500 transition-colors"></div></div>
+                <div class="flex items-center justify-between pt-1"><label class="flex items-center cursor-pointer select-none"><input type="checkbox" id="login-lembrar" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"><span class="ml-2 text-xs font-semibold text-slate-600">Lembrar-me</span></label></div>
+                <button onclick="efetuarLogin()" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/25 transition-all text-sm flex items-center justify-center gap-2 transform active:scale-98"><i class="fa-solid fa-right-to-bracket"></i> Entrar no Sistema</button>
+                <div class="pt-4 border-t border-slate-100 text-center"><p class="text-xs text-slate-500">Ainda não tem um usuário?</p><button onclick="alternarAuthScreen('registro')" class="mt-2 text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors">Criar Nova Conta / Cadastrar-se</button></div>
+            </div>
+            <div id="form-registro" class="p-6 md:p-8 space-y-4 hidden">
+                <div class="text-center mb-1"><h3 class="text-xl font-bold text-slate-800">Novo Cadastro</h3><p class="text-xs text-slate-500">Preencha os dados abaixo para se registrar</p></div>
+                <div><label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">Nome Completo</label><div class="relative"><i class="fa-solid fa-id-card absolute left-4 top-3.5 text-slate-400"></i><input type="text" id="reg-nome" placeholder="Ex: Rodrigo de Jesus" class="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-500 transition-colors"></div></div>
+                <div><label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">E-mail de Acesso</label><div class="relative"><i class="fa-solid fa-at absolute left-4 top-3.5 text-slate-400"></i><input type="email" id="reg-usuario" autocomplete="email" placeholder="rodrigo@email.com" class="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-500 transition-colors"></div></div>
+                <div><label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">Senha</label><div class="relative"><i class="fa-solid fa-key absolute left-4 top-3.5 text-slate-400"></i><input type="password" id="reg-senha" autocomplete="new-password" placeholder="Mínimo 6 caracteres" class="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-500 transition-colors"></div></div>
+                <div><label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Escala Operacional</label>
+                    <div class="grid grid-cols-4 gap-2">
+                        <div><input type="radio" name="escala-opcao" id="escala-a" value="A" class="escala-radio hidden" checked><label for="escala-a" class="flex items-center justify-center p-2.5 bg-slate-100 text-slate-700 font-bold text-sm rounded-xl border border-slate-200 cursor-pointer transition-all">Escala A</label></div>
+                        <div><input type="radio" name="escala-opcao" id="escala-b" value="B" class="escala-radio hidden"><label for="escala-b" class="flex items-center justify-center p-2.5 bg-slate-100 text-slate-700 font-bold text-sm rounded-xl border border-slate-200 cursor-pointer transition-all">Escala B</label></div>
+                        <div><input type="radio" name="escala-opcao" id="escala-c" value="C" class="escala-radio hidden"><label for="escala-c" class="flex items-center justify-center p-2.5 bg-slate-100 text-slate-700 font-bold text-sm rounded-xl border border-slate-200 cursor-pointer transition-all">Escala C</label></div>
+                        <div><input type="radio" name="escala-opcao" id="escala-d" value="D" class="escala-radio hidden"><label for="escala-d" class="flex items-center justify-center p-2.5 bg-slate-100 text-slate-700 font-bold text-sm rounded-xl border border-slate-200 cursor-pointer transition-all">Escala D</label></div>
+                    </div>
+                </div>
+                <button type="button" data-action="firebase-register" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-emerald-500/25 transition-all text-sm flex items-center justify-center gap-2 transform active:scale-98 mt-2"><i class="fa-solid fa-user-plus"></i> Finalizar Cadastro</button>
+                <div class="pt-3 border-t border-slate-100 text-center"><button onclick="alternarAuthScreen('login')" class="text-xs font-bold text-slate-600 hover:text-slate-800 transition-colors flex items-center justify-center gap-1 mx-auto"><i class="fa-solid fa-arrow-left"></i> Voltar para o Login</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- APLICATIVO PRINCIPAL -->
+    <div id="main-app" class="flex h-screen overflow-hidden text-slate-700 bg-slate-50 w-full">
+        <aside class="hidden md:flex w-72 bg-[#0f172a] text-slate-300 flex-col transition-all duration-300 shadow-2xl z-20 flex-shrink-0">
+            <div class="p-6 flex items-center gap-4 border-b border-slate-800/80">
+                <div class="bg-gradient-to-br from-blue-500 to-indigo-600 p-3 rounded-xl text-white shadow-lg shadow-blue-500/30"><i class="fa-solid fa-boxes-stacked text-2xl"></i></div>
+                <div><h1 class="font-bold text-xl text-white tracking-wide">Expedição</h1><p class="text-xs text-indigo-300 font-medium tracking-wider uppercase">Escala 2.0 Cloud</p></div>
+            </div>
+            <div class="mx-4 my-4 p-3.5 bg-slate-800/80 rounded-2xl border border-slate-700/60 flex items-center justify-between">
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <div id="user-avatar" class="w-10 h-10 rounded-xl bg-blue-600 text-white font-bold flex items-center justify-center flex-shrink-0 shadow-md">-</div>
+                    <div class="truncate">
+                        <p id="user-display-name" class="font-bold text-white text-xs truncate">Carregando...</p>
+                        <div class="flex items-center gap-2 mt-0.5"><span id="user-display-login" class="text-[10px] text-slate-400 truncate">@user</span><span id="user-display-escala" class="text-[9px] bg-blue-500/30 text-blue-300 px-1.5 py-0.5 rounded font-black border border-blue-400/30">A</span></div>
+                    </div>
+                </div>
+                <button onclick="efetuarLogout()" title="Sair do Sistema" class="text-slate-400 hover:text-red-400 p-2 rounded-lg hover:bg-slate-700/50 transition-colors"><i class="fa-solid fa-right-from-bracket text-base"></i></button>
+            </div>
+            <nav class="flex-1 px-4 py-2 space-y-2 overflow-y-auto">
+                <button onclick="switchTab('tab-lancar')" id="btn-lancar" class="menu-item active w-full flex items-center gap-4 px-5 py-3.5 rounded-xl transition-all text-left font-medium hover:bg-slate-800"><i class="fa-solid fa-clipboard-list w-5 text-center text-lg"></i> <span>Lançar Escala</span></button>
+                <button onclick="switchTab('tab-tv')" id="btn-tv" class="menu-item w-full flex items-center gap-4 px-5 py-3.5 rounded-xl transition-all text-left font-medium hover:bg-slate-800 hover:text-white"><i class="fa-solid fa-tv w-5 text-center text-lg"></i> <span>Apresentação TV</span></button>
+                <button onclick="switchTab('tab-dashboard')" id="btn-dashboard" class="menu-item w-full flex items-center gap-4 px-5 py-3.5 rounded-xl transition-all text-left font-medium hover:bg-slate-800 hover:text-white"><i class="fa-solid fa-chart-pie w-5 text-center text-lg"></i> <span>Dashboard</span></button>
+                <button onclick="switchTab('tab-historico')" id="btn-historico" class="menu-item w-full flex items-center gap-4 px-5 py-3.5 rounded-xl transition-all text-left font-medium hover:bg-slate-800 hover:text-white"><i class="fa-solid fa-clock-rotate-left w-5 text-center text-lg"></i> <span>Histórico</span></button>
+                <div class="pt-4 mt-2 border-t border-slate-800/50">
+                    <button onclick="switchTab('tab-equipe')" id="btn-equipe" class="menu-item w-full flex items-center gap-4 px-5 py-3.5 rounded-xl transition-all text-left font-medium hover:bg-slate-800 hover:text-white"><i class="fa-solid fa-users-gear w-5 text-center text-lg"></i> <span>Equipe</span></button>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="flex-1 flex flex-col h-full overflow-hidden relative">
+            <header class="bg-white/90 backdrop-blur-md px-5 md:px-10 py-4 flex flex-row justify-between items-center gap-2 z-10 sticky top-0 border-b border-slate-200 shadow-sm flex-shrink-0">
+                <div class="flex items-center gap-3"><h2 id="page-title" class="text-lg md:text-2xl font-bold text-slate-800 tracking-tight">Lançamento de Escala</h2></div>
+                <div class="flex items-center gap-2 md:gap-3">
+                    <button id="btn-sincronizar-global" onclick="sincronizarDadosUsuario()" title="Sincronizar os dados desta conta" class="flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-all shadow-sm">
+                        <i id="icone-sincronizar-global" class="fa-solid fa-cloud-arrow-down"></i><span class="hidden sm:inline">Sincronizar dados</span>
+                    </button>
+                    <div class="md:hidden flex items-center gap-2 bg-slate-100 p-1.5 pl-3 rounded-xl border border-slate-200">
+                        <span id="mobile-user-name" class="text-xs font-bold text-slate-700 truncate max-w-[90px]">Usuário</span>
+                        <span id="mobile-user-escala" class="text-[10px] bg-blue-600 text-white font-bold px-1.5 py-0.5 rounded">A</span>
+                        <button onclick="efetuarLogout()" class="text-slate-500 hover:text-red-500 p-1"><i class="fa-solid fa-right-from-bracket text-xs"></i></button>
+                    </div>
+                    <div class="hidden sm:block text-right">
+                        <p class="text-[10px] md:text-xs font-semibold text-slate-400 uppercase tracking-wider">Turno Operacional</p>
+                        <p class="text-xs md:text-sm text-blue-700 font-bold bg-blue-50 py-1 px-2 md:py-1.5 md:px-3 rounded-md mt-0.5 inline-block border border-blue-100">2º TURNO (T2)</p>
+                    </div>
+                </div>
+            </header>
+
+            <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-10 scroll-smooth w-full">
+                <div class="max-w-[1600px] mx-auto w-full">
+                    <div id="tab-lancar" class="tab-content active">
+                        <div class="card-soft p-5 md:p-6 mb-6 md:mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div class="w-full md:w-auto">
+                                <label class="block text-xs md:text-sm font-semibold text-slate-500 mb-2 uppercase tracking-wide">Data da Escala</label>
+                                <input type="date" id="data-escala" class="w-full md:w-72 px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 outline-none text-slate-700 font-medium transition-colors bg-slate-50 hover:bg-white text-sm">
+                            </div>
+                            <button id="btn-salvar" onclick="salvarEscalaLote()" class="hidden md:flex w-full md:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3.5 rounded-xl font-bold shadow-lg shadow-blue-500/30 transition-all duration-300 items-center justify-center gap-3 transform hover:-translate-y-0.5">
+                                <i id="icone-btn-salvar" class="fa-solid fa-floppy-disk text-lg"></i> <span id="texto-btn-salvar">Salvar Escala Diária</span>
+                            </button>
+                        </div>
+                        <div class="card-soft p-5 md:p-6 mb-6 border border-blue-100 bg-blue-50/40">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h3 class="font-bold text-slate-800 text-lg">Pré-Escala em Tempo Real</h3>
+            <p class="text-xs text-slate-500">Visualização dos colaboradores selecionados por atividade</p>
+        </div>
+        <i class="fa-solid fa-eye text-blue-600"></i>
+    </div>
+    <div id="pre-escala-lista" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+        <p class="text-sm text-slate-400">Nenhum colaborador selecionado.</p>
+    </div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6" id="painel-atividades"></div>
+                        <button onclick="salvarEscalaLote()" class="md:hidden fab-button" title="Salvar Escala"><i class="fa-solid fa-floppy-disk"></i></button>
+                    </div>
+
+                    <div id="tab-tv" class="tab-content">
+                        <div class="card-soft p-5 md:p-6 mb-6 md:mb-8 flex flex-col lg:flex-row justify-between items-center gap-4">
+                            <div class="text-center lg:text-left"><h3 class="text-lg md:text-xl font-bold text-slate-800 mb-1">Painel da Equipe</h3><p class="text-slate-500 text-xs md:text-sm font-medium">Visualização para telas e monitores.</p></div>
+                            <div class="flex items-center w-full lg:w-auto justify-between lg:justify-start gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 shadow-inner">
+                                <button onclick="navegarDataTV(-1)" class="flex-1 lg:flex-none justify-center px-4 py-3 md:py-2.5 bg-white text-slate-600 hover:text-blue-600 rounded-lg shadow-sm border border-slate-200 transition-all font-medium flex items-center gap-2"><i class="fa-solid fa-chevron-left text-sm"></i> <span class="hidden sm:inline">Anterior</span></button>
+                                <div class="text-center px-4 border-l border-r border-slate-200 flex-1 lg:w-48"><input type="date" id="data-tv" class="hidden" onchange="carregarTelaTV()"><p id="data-tv-exibicao" class="font-bold text-blue-700 text-sm md:text-lg tracking-wide whitespace-nowrap">Sem Escalas</p></div>
+                                <button onclick="navegarDataTV(1)" class="flex-1 lg:flex-none justify-center px-4 py-3 md:py-2.5 bg-white text-slate-600 hover:text-blue-600 rounded-lg shadow-sm border border-slate-200 transition-all font-medium flex items-center gap-2"><span class="hidden sm:inline">Próxima</span> <i class="fa-solid fa-chevron-right text-sm"></i></button>
+                            </div>
+                        </div>
+                        <div id="container-tv" class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8"></div>
+                    </div>
+
+                    <div id="tab-dashboard" class="tab-content">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
+                            
+<!-- FILTRO DE PERÍODO DO DASHBOARD -->
+<div class="card-soft p-5 md:p-6 mb-6">
+<div class="grid grid-cols-1 lg:grid-cols-5 gap-4 items-end">
+<div>
+<label class="block text-xs font-bold text-slate-500 uppercase mb-2">Data Inicial</label>
+<input type="date" id="dash-data-inicial" class="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50">
+</div>
+<div>
+<label class="block text-xs font-bold text-slate-500 uppercase mb-2">Data Final</label>
+<input type="date" id="dash-data-final" class="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50">
+</div>
+<div class="lg:col-span-2 flex flex-wrap gap-2">
+<button onclick="dashHoje()" class="px-3 py-2 rounded-lg bg-blue-50 text-blue-700 font-bold text-sm">Hoje</button>
+<button onclick="dashUltimos7()" class="px-3 py-2 rounded-lg bg-indigo-50 text-indigo-700 font-bold text-sm">7 dias</button>
+<button onclick="dashMesAtual()" class="px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 font-bold text-sm">Este mês</button>
+<button onclick="dashMesAnterior()" class="px-3 py-2 rounded-lg bg-orange-50 text-orange-700 font-bold text-sm">Mês anterior</button>
+</div>
+<div>
+<button onclick="filtrarDashboardPeriodo()" class="w-full bg-blue-600 text-white px-5 py-3 rounded-xl font-bold"><i class="fa-solid fa-filter"></i> Filtrar</button>
+</div>
+</div>
+</div>
+<div class="card-soft p-5 md:p-6 flex items-center gap-4 overflow-hidden group">
+                                <div class="bg-blue-50 p-3 md:p-4 rounded-2xl border border-blue-100 text-blue-600 text-xl md:text-2xl flex items-center justify-center"><i class="fa-solid fa-users"></i></div>
+                                <div><p class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-0.5">Equipe Ativa</p><h4 class="text-2xl md:text-3xl font-bold text-slate-800" id="dash-total-colabs">0</h4></div>
+                            </div>
+                            <div class="card-soft p-5 md:p-6 flex items-center gap-4 overflow-hidden group">
+                                <div class="bg-indigo-50 p-3 md:p-4 rounded-2xl border border-indigo-100 text-indigo-600 text-xl md:text-2xl flex items-center justify-center"><i class="fa-solid fa-list-check"></i></div>
+                                <div><p class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-0.5">Escalas Lançadas</p><h4 class="text-2xl md:text-3xl font-bold text-slate-800" id="dash-total-escalas">0</h4></div>
+                            </div>
+                            <div class="card-soft p-5 md:p-6 flex items-center gap-4 overflow-hidden group">
+                                <div class="bg-emerald-50 p-3 md:p-4 rounded-2xl border border-emerald-100 text-emerald-600 text-xl md:text-2xl flex items-center justify-center"><i class="fa-solid fa-trophy"></i></div>
+                                <div><p class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-0.5">Top Atividade</p><h4 class="text-lg md:text-2xl font-bold text-slate-800 truncate max-w-[120px] md:max-w-[150px]" id="dash-top-ativ">-</h4></div>
+                            </div>
+                        </div>
+                        <div class="card-soft p-4 md:p-8">
+                            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                                <h3 class="text-lg md:text-xl font-bold text-slate-800">Volume de Atividades</h3>
+                                <button onclick="sincronizarDashboard()" class="w-full sm:w-auto bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-4 py-2.5 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 transition-colors"><i id="icone-sincronizar" class="fa-solid fa-arrows-rotate"></i> Sincronizar</button>
+                            </div>
+                            <div id="container-grafico"><canvas id="graficoAtividades"></canvas></div>
+                        </div>
+                    </div>
+
+                    <div id="tab-historico" class="tab-content">
+                        <div class="card-soft p-4 md:p-6 mb-6">
+                            <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+                                <div class="relative w-full sm:max-w-md"><i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-slate-400"></i><input type="text" id="busca-historico" onkeyup="filtrarHistorico()" placeholder="Buscar..." class="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-sm bg-slate-50"></div>
+                                <div class="w-full sm:w-auto"><button onclick="apagarHistoricosSelecionados()" id="btn-apagar-selecionados" class="hidden w-full text-white bg-gradient-to-r from-red-500 to-rose-600 px-5 py-3 rounded-xl shadow-lg font-medium flex justify-center items-center gap-2 text-sm"><i class="fa-solid fa-trash-can"></i> Apagar (<span id="cont-selecionados">0</span>)</button></div>
+                            </div>
+                            <div class="overflow-x-auto rounded-xl border border-slate-200">
+                                <table class="w-full text-left border-collapse bg-white min-w-[600px]">
+                                    <thead>
+                                        <tr class="bg-slate-50 text-slate-600 text-xs md:text-sm border-b border-slate-200">
+                                            <th class="p-3 md:p-4 w-12 text-center"><input type="checkbox" id="check-all-hist" onchange="toggleAllHistorico()" class="w-4 h-4 cursor-pointer"></th>
+                                            <th class="p-3 md:p-4 font-semibold uppercase tracking-wider text-[10px] md:text-xs">Data</th>
+                                            <th class="p-3 md:p-4 font-semibold uppercase tracking-wider text-[10px] md:text-xs">Colaborador</th>
+                                            <th class="p-3 md:p-4 font-semibold uppercase tracking-wider text-[10px] md:text-xs">Atividade</th>
+                                            <th class="p-3 md:p-4 font-semibold uppercase tracking-wider text-[10px] md:text-xs">Turno</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabela-historico" class="text-xs md:text-sm text-slate-700 divide-y divide-slate-100"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tab-equipe" class="tab-content">
+                        <div class="card-soft p-4 md:p-8 max-w-4xl mx-auto">
+                            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 border-b border-slate-100 pb-4">
+                                <div><h3 class="text-xl md:text-2xl font-bold text-slate-800 mb-1">Equipe T2</h3><p class="text-xs md:text-sm text-slate-500 font-medium">Adicione ou remova membros da equipe.</p></div>
+                                <button onclick="abrirModalColab()" class="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-6 py-3 rounded-xl font-medium shadow-lg flex justify-center items-center gap-2 text-sm"><i class="fa-solid fa-user-plus"></i> Novo Cadastro</button>
+                            </div>
+                            <div class="relative mb-6"><i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-slate-400"></i><input type="text" id="busca-equipe" onkeyup="renderizarTabelaEquipe()" placeholder="Buscar colaborador..." class="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-xl outline-none focus:border-emerald-500 text-sm bg-slate-50"></div>
+                            <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                                <table class="w-full text-left border-collapse min-w-[400px]">
+                                    <thead>
+                                        <tr class="bg-slate-50 text-slate-600 text-[10px] md:text-xs uppercase tracking-wider border-b border-slate-200">
+                                            <th class="p-3 md:p-4 font-semibold">Nome Completo</th>
+                                            <th class="p-3 md:p-4 font-semibold text-center w-24 md:w-32">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabela-equipe" class="text-xs md:text-sm text-slate-700 divide-y divide-slate-100"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center px-1 py-2 z-50 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] pb-safe">
+            <button onclick="switchTab('tab-lancar')" id="nav-lancar" class="bottom-nav-item active flex flex-col items-center gap-1 p-2 w-1/5"><i class="fa-solid fa-clipboard-list text-xl"></i><span class="text-[10px] font-medium leading-none">Lançar</span></button>
+            <button onclick="switchTab('tab-tv')" id="nav-tv" class="bottom-nav-item flex flex-col items-center gap-1 p-2 w-1/5"><i class="fa-solid fa-tv text-xl"></i><span class="text-[10px] font-medium leading-none">TV</span></button>
+            <button onclick="switchTab('tab-dashboard')" id="nav-dashboard" class="bottom-nav-item flex flex-col items-center gap-1 p-2 w-1/5"><i class="fa-solid fa-chart-pie text-xl"></i><span class="text-[10px] font-medium leading-none">Dash</span></button>
+            <button onclick="switchTab('tab-historico')" id="nav-historico" class="bottom-nav-item flex flex-col items-center gap-1 p-2 w-1/5"><i class="fa-solid fa-clock-rotate-left text-xl"></i><span class="text-[10px] font-medium leading-none">Histórico</span></button>
+            <button onclick="switchTab('tab-equipe')" id="nav-equipe" class="bottom-nav-item flex flex-col items-center gap-1 p-2 w-1/5"><i class="fa-solid fa-users-gear text-xl"></i><span class="text-[10px] font-medium leading-none">Equipe</span></button>
+        </nav>
+    </div>
+
+    <!-- Modal Novo Colaborador -->
+    <div id="modal-colab" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] hidden flex items-center justify-center transition-opacity px-4">
+        <div class="bg-white rounded-2xl p-6 md:p-8 w-full max-w-[450px] shadow-2xl transform transition-all border border-slate-100">
+            <h3 class="text-xl font-bold text-slate-800 mb-2">Adicionar à Equipe</h3>
+            <p class="text-slate-500 text-sm mb-6">Digite o nome completo do novo colaborador.</p>
+            <input type="text" id="novo-nome-colab" placeholder="Ex: João da Silva..." class="w-full px-4 py-3 border-2 border-slate-200 rounded-xl outline-none focus:border-blue-500 mb-6 bg-slate-50 text-sm font-medium text-slate-700">
+            <div class="flex flex-col-reverse sm:flex-row justify-end gap-3">
+                <button onclick="fecharModalColab()" class="w-full sm:w-auto px-5 py-3 text-slate-600 hover:bg-slate-100 rounded-xl font-medium transition-colors text-sm">Cancelar</button>
+                <button onclick="salvarNovoColab()" class="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md transition-colors text-sm">Salvar Cadastro</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script>
+        // === MOTOR GRÁFICO OTIMIZADO ===
+        function initAIBrainAnimation() {
+            const canvas = document.getElementById('ai-canvas');
+            const ctx = canvas.getContext('2d');
+            let width, height, cx, cy;
+            const isMobile = window.innerWidth < 768;
+
+            let mouse = { x: -1000, y: -1000, radius: isMobile ? 90 : 150, active: false };
+
+            function updateCoordinates(clientX, clientY) {
+                const rect = canvas.getBoundingClientRect();
+                mouse.x = (clientX - rect.left) * (canvas.width / rect.width) / dpr;
+                mouse.y = (clientY - rect.top) * (canvas.height / rect.height) / dpr;
+                mouse.active = true;
+            }
+
+            window.addEventListener('mousemove', (e) => { updateCoordinates(e.clientX, e.clientY); });
+            window.addEventListener('mouseout', () => { mouse.active = false; mouse.x = -1000; mouse.y = -1000; });
+            
+            window.addEventListener('touchstart', (e) => {
+                if (e.touches.length > 0) { updateCoordinates(e.touches[0].clientX, e.touches[0].clientY); }
+            }, { passive: true });
+
+            window.addEventListener('touchmove', (e) => {
+                if (e.touches.length > 0) { updateCoordinates(e.touches[0].clientX, e.touches[0].clientY); }
+            }, { passive: true });
+
+            window.addEventListener('touchend', () => { mouse.active = false; mouse.x = -1000; mouse.y = -1000; });
+            window.addEventListener('touchcancel', () => { mouse.active = false; mouse.x = -1000; mouse.y = -1000; });
+
+            let dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 2 : 2.5);
+            function resize() {
+                width = window.innerWidth;
+                height = window.innerHeight;
+                dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 2 : 2.5);
+                canvas.style.width = width + 'px';
+                canvas.style.height = height + 'px';
+                canvas.width = Math.max(1, Math.floor(width * dpr));
+                canvas.height = Math.max(1, Math.floor(height * dpr));
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                cx = width / 2;
+                cy = height / 2 + (isMobile ? -20 : 0);
+            }
+            let resizeTimer;
+            window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(resize, 120); }, { passive:true });
+            window.addEventListener('orientationchange', () => setTimeout(resize, 180), { passive:true });
+            resize();
+
+            const brainNodes = [];
+            const numNodes = isMobile ? 70 : 130; 
+            const baseScale = isMobile ? 0.8 : 1.25;
+
+            function createBrainStructure() {
+                const offCanvas = document.createElement('canvas');
+                offCanvas.width = Math.max(1, Math.floor(width * dpr));
+                offCanvas.height = Math.max(1, Math.floor(height * dpr));
+                const octx = offCanvas.getContext('2d');
+                octx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                
+                function drawBrain(ctx_target, fillMode) {
+                    const s = baseScale;
+                    ctx_target.beginPath();
+                    ctx_target.ellipse(cx, cy, 120*s, 85*s, 0, 0, Math.PI*2); 
+                    ctx_target.ellipse(cx - 85*s, cy + 15*s, 55*s, 65*s, -0.2, 0, Math.PI*2); 
+                    ctx_target.ellipse(cx + 85*s, cy + 20*s, 50*s, 60*s, 0.2, 0, Math.PI*2); 
+                    ctx_target.ellipse(cx - 20*s, cy + 55*s, 70*s, 45*s, -0.1, 0, Math.PI*2); 
+                    ctx_target.ellipse(cx + 70*s, cy + 75*s, 40*s, 30*s, -0.2, 0, Math.PI*2); 
+                    
+                    if(fillMode) {
+                        ctx_target.fillStyle = '#fff'; ctx_target.fill();
+                        ctx_target.beginPath();
+                        ctx_target.moveTo(cx - 10*s, cy + 60*s); ctx_target.lineTo(cx + 25*s, cy + 60*s);
+                        ctx_target.lineTo(cx + 15*s, cy + 120*s); ctx_target.lineTo(cx - 15*s, cy + 120*s);
+                        ctx_target.fill();
+                    } else {
+                        ctx_target.strokeStyle = 'rgba(0, 210, 255, 0.15)'; ctx_target.lineWidth = 2; ctx_target.stroke();
+                    }
+                }
+
+                drawBrain(octx, true);
+                const canvasWidth = Math.floor(width * dpr);
+                const canvasHeight = Math.floor(height * dpr);
+                const imgData = octx.getImageData(0, 0, canvasWidth, canvasHeight).data;
+
+                let attempts = 0;
+                while(brainNodes.length < numNodes && attempts < 15000) {
+                    let x = Math.floor(Math.random() * canvasWidth);
+                    let y = Math.floor(Math.random() * canvasHeight);
+                    let idx = (y * canvasWidth + x) * 4;
+                    
+                    if(imgData[idx] > 0) {
+                        let logicalX = x / dpr;
+                        let logicalY = y / dpr;
+                        brainNodes.push({
+                            x: logicalX - cx, y: logicalY - cy, baseX: logicalX - cx, baseY: logicalY - cy,
+                            vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4,
+                            size: Math.random() * 2 + 1, pulse: Math.random() * Math.PI * 2,
+                            connections: []
+                        });
+                    }
+                    attempts++;
+                }
+
+                const connectDist = isMobile ? 35 : 55;
+                for(let i=0; i < brainNodes.length; i++) {
+                    for(let j=i+1; j < brainNodes.length; j++) {
+                        let dx = brainNodes[i].baseX - brainNodes[j].baseX;
+                        let dy = brainNodes[i].baseY - brainNodes[j].baseY;
+                        if(Math.sqrt(dx*dx + dy*dy) < connectDist) brainNodes[i].connections.push(j);
+                    }
+                }
+                return drawBrain;
+            }
+            
+            const drawBrainWireframe = createBrainStructure();
+
+            const codeLines = [];
+            const codeSnippets = [
+                "Σ (λ, x, f(x)) = 0", "def algorithm_gen():", "return false;", 
+                "import sys, os", "data = node.context", "if (const_x == true):", 
+                "01001001 01100001", "while(nodes.alive):", "neural_net.train()", 
+                "f(x) = p(x|θ)", "tensor = tf.constant(x)", "await async_process()",
+                "x * y + z * p.z", "double dist() const", "depth (N), rt(N)"
+            ];
+            
+            const numCodes = isMobile ? 15 : 30;
+
+            for(let i = 0; i < numCodes; i++) {
+                codeLines.push({
+                    text: codeSnippets[Math.floor(Math.random() * codeSnippets.length)],
+                    angle: Math.random() * Math.PI * 2,
+                    radius: (isMobile ? 120 : 250) + Math.random() * (isMobile ? 80 : 200),
+                    y: (Math.random() - 0.5) * (isMobile ? 350 : 600),
+                    speed: (Math.random() * 0.005 + 0.002) * (Math.random() > 0.5 ? 1 : -1)
+                });
+            }
+
+            const bgCodes = [];
+            for(let i=0; i< (isMobile ? 15 : 20); i++) {
+                bgCodes.push({
+                    x: Math.random() * width, y: Math.random() * height,
+                    text: codeSnippets[Math.floor(Math.random() * codeSnippets.length)],
+                    speed: Math.random() * 0.5 + 0.2
+                });
+            }
+
+            function animate() {
+                ctx.fillStyle = 'rgba(1, 6, 14, 0.35)';
+                ctx.fillRect(0, 0, width, height);
+                ctx.shadowBlur = 0;
+
+                let mouseOffsetX = mouse.active ? (mouse.x - cx) * 0.03 : 0;
+                let mouseOffsetY = mouse.active ? (mouse.y - cy) * 0.03 : 0;
+
+                ctx.font = isMobile ? "9px 'Fira Code'" : "12px 'Fira Code'";
+                ctx.fillStyle = 'rgba(0, 210, 255, 0.15)';
+                bgCodes.forEach(bg => {
+                    ctx.fillText(bg.text, bg.x - mouseOffsetX, bg.y - mouseOffsetY);
+                    bg.y -= bg.speed;
+                    if(bg.y < -20) bg.y = height + 20;
+                });
+
+                codeLines.forEach(c => { c.angle += c.speed; c.z = Math.sin(c.angle) * c.radius; });
+
+                function renderOrbitalCodes(codesArray) {
+                    codesArray.forEach(c => {
+                        let x = cx + Math.cos(c.angle) * c.radius - mouseOffsetX*2; 
+                        let y = cy + c.y - mouseOffsetY*2; 
+                        let scale = Math.max(0.4, (c.radius + c.z) / (2 * c.radius));
+                        ctx.globalAlpha = scale * 0.8;
+                        ctx.font = `${Math.floor((isMobile ? 12 : 16) * scale)}px "Fira Code", monospace`;
+                        ctx.fillStyle = c.text.includes("01") ? "#34d399" : "#00d2ff";
+                        ctx.fillText(c.text, x, y);
+                    });
+                }
+
+                const backCodes = codeLines.filter(c => c.z < 0);
+                const frontCodes = codeLines.filter(c => c.z >= 0);
+
+                renderOrbitalCodes(backCodes);
+                ctx.globalAlpha = 1.0;
+
+                drawBrainWireframe(ctx, false);
+
+                brainNodes.forEach((n) => {
+                    let absoluteX = cx + n.x;
+                    let absoluteY = cy + n.y;
+
+                    let dxMouse = absoluteX - mouse.x;
+                    let dyMouse = absoluteY - mouse.y;
+                    let distMouse = Math.sqrt(dxMouse*dxMouse + dyMouse*dyMouse);
+
+                    if(mouse.active && distMouse < mouse.radius) {
+                        let force = (mouse.radius - distMouse) / mouse.radius;
+                        if (distMouse > 0.001) {
+                            n.x += (dxMouse / distMouse) * force * 4;
+                            n.y += (dyMouse / distMouse) * force * 4;
+                        }
+                    } else {
+                        n.x -= (n.x - n.baseX) * 0.05;
+                        n.y -= (n.y - n.baseY) * 0.05;
+                    }
+
+                    n.x += n.vx; n.y += n.vy;
+                    if(Math.abs(n.x - n.baseX) > 15) n.vx *= -1;
+                    if(Math.abs(n.y - n.baseY) > 15) n.vy *= -1;
+                });
+
+                ctx.strokeStyle = "rgba(0, 210, 255, 0.25)";
+                ctx.lineWidth = isMobile ? 0.6 : 1;
+                ctx.beginPath();
+                brainNodes.forEach(n1 => {
+                    n1.connections.forEach(j => {
+                        let n2 = brainNodes[j];
+                        ctx.moveTo(cx + n1.x, cy + n1.y);
+                        ctx.lineTo(cx + n2.x, cy + n2.y);
+                    });
+                });
+                ctx.stroke();
+
+                if(mouse.active) {
+                    ctx.beginPath();
+                    brainNodes.forEach(n => {
+                        let dx = (cx + n.x) - mouse.x;
+                        let dy = (cy + n.y) - mouse.y;
+                        let dist = Math.sqrt(dx*dx + dy*dy);
+                        if(dist < mouse.radius * 1.5) { 
+                            ctx.moveTo(cx + n.x, cy + n.y);
+                            ctx.lineTo(mouse.x, mouse.y);
+                        }
+                    });
+                    ctx.strokeStyle = "rgba(52, 211, 153, 0.4)"; 
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.arc(mouse.x, mouse.y, isMobile ? 6 : 4, 0, Math.PI*2);
+                    ctx.fillStyle = "#ffffff";
+                    ctx.fill();
+                }
+
+                ctx.fillStyle = "#bae6fd";
+                ctx.beginPath();
+                brainNodes.forEach(n => {
+                    n.pulse += 0.03 + Math.random() * 0.02;
+                    let size = n.size + Math.sin(n.pulse)*0.5;
+                    ctx.moveTo(cx + n.x, cy + n.y);
+                    ctx.arc(cx + n.x, cy + n.y, Math.max(0.5, size), 0, Math.PI*2);
+                });
+                ctx.fill();
+
+                ctx.fillStyle = "#ffffff";
+                ctx.beginPath();
+                brainNodes.forEach(n => {
+                    if (Math.sin(n.pulse) > 0.8) {
+                        let size = n.size + Math.sin(n.pulse)*0.5;
+                        ctx.moveTo(cx + n.x, cy + n.y);
+                        ctx.arc(cx + n.x, cy + n.y, Math.max(0.5, size), 0, Math.PI*2);
+                    }
+                });
+                ctx.fill();
+
+                renderOrbitalCodes(frontCodes);
+
+                if (document.getElementById('intro-screen').style.display !== 'none') {
+                    requestAnimationFrame(animate);
+                }
+            }
+
+            animate();
+        }
+
+        // ==================== AUTENTICAÇÃO E FIRESTORE CORRIGIDOS ====================
+        let usuarioLogadoAtual = null;
+        let bancoDeDados = [];
+        let listaColaboradores = [];
+        let grafico = null; 
+        let datasComEscala = [];
+
+        window.carregarPerfilFirebase = async function(user) {
+            if (!user || !window.firebaseDb) return null;
+
+            const dadosBasicos = {
+                uid: user.uid,
+                nome: user.displayName || user.email || 'Usuário',
+                usuario: user.email || '',
+                email: user.email || '',
+                escala: 'A'
+            };
+
+            try {
+                const snap = await window.firebaseGetDoc(
+                    window.firebaseDoc(window.firebaseDb, 'users', user.uid)
+                );
+
+                if (snap.exists()) {
+                    usuarioLogadoAtual = { ...dadosBasicos, ...snap.data(), uid: user.uid };
+                } else {
+                    usuarioLogadoAtual = dadosBasicos;
+                    await window.firebaseSetDoc(
+                        window.firebaseDoc(window.firebaseDb, 'users', user.uid),
+                        { nome: dadosBasicos.nome, usuario: dadosBasicos.usuario, email: dadosBasicos.email, escala: 'A', criadoEm: window.firebaseServerTimestamp() },
+                        { merge: true }
+                    );
+                }
+            } catch (error) {
+                console.error('Erro ao carregar perfil:', error);
+                usuarioLogadoAtual = dadosBasicos;
+            }
+
+            return usuarioLogadoAtual;
+        };
+
+        window.escutarDadosFirestore = function() {
+            if (!window.firebaseDb || !window.currentUserUid) return;
+
+            if (window._unsubscribeFirestore) {
+                window._unsubscribeFirestore();
+                window._unsubscribeFirestore = null;
+            }
+
+            const userDocRef = window.firebaseDoc(
+                window.firebaseDb,
+                "users",
+                window.currentUserUid
+            );
+
+            window._unsubscribeFirestore = window.firebaseOnSnapshot(
+                userDocRef,
+                (snap) => {
+                    if (!snap.exists()) return;
+                    const data = snap.data() || {};
+                    bancoDeDados = Array.isArray(data.registros)
+                        ? data.registros
+                        : (Array.isArray(data.escala) ? data.escala : []);
+                    listaColaboradores = Array.isArray(data.colaboradores) ? data.colaboradores : [];
+                    const escalaPerfil = typeof data.escala === 'string' ? data.escala : (usuarioLogadoAtual?.escala || 'A');
+                    if (usuarioLogadoAtual) usuarioLogadoAtual.escala = escalaPerfil;
+                    atualizarListaDatasComEscala();
+                    salvarCacheLocalUsuario(window.currentUserUid);
+                    const total = document.getElementById('dash-total-colabs');
+                    if (total) total.innerText = listaColaboradores.length;
+                    if (document.getElementById('main-app')?.style.display !== 'none') {
+                        atualizarUIUsuario();
+                        renderizarCardsAtividades();
+                        renderizarTabelaEquipe();
+                        renderizarDashboard();
+                    }
+                },
+                (error) => {
+                    console.warn("Sincronização em tempo real suspensa. Cache local mantido:", error);
+                }
+            );
+        };
+
+        async function garantirFirebaseDisponivel() {
+            if (window.firebaseReady && window.firebaseAuth && window.firebaseDb) return true;
+
+            const inicio = Date.now();
+            const limite = 10000;
+            while (Date.now() - inicio < limite) {
+                if (window.firebaseReady && window.firebaseAuth && window.firebaseDb) return true;
+                await new Promise(resolve => setTimeout(resolve, 150));
+            }
+
+            showToast('Não foi possível conectar ao sistema. Recarregue a página.', 'error');
+            return false;
+        }
+
+        function controlarBotaoAuth(botao, carregando, textoNormal) {
+            if (!botao) return;
+            botao.disabled = carregando;
+            botao.classList.toggle('auth-btn-loading', carregando);
+            if (carregando) {
+                botao.dataset.authTexto = botao.innerHTML;
+                botao.innerHTML = '<i class="fa-solid fa-spinner"></i> Processando...';
+            } else {
+                botao.innerHTML = botao.dataset.authTexto || textoNormal;
+            }
+        }
+
+        function mensagemErroAuth(error, contexto) {
+            console.error(`Erro no ${contexto} Firebase:`, error);
+            const mensagens = {
+                'auth/invalid-credential': 'E-mail ou palavra-passe incorretos.',
+                'auth/user-not-found': 'E-mail ou palavra-passe incorretos.',
+                'auth/wrong-password': 'E-mail ou palavra-passe incorretos.',
+                'auth/invalid-email': 'Informe um e-mail válido.',
+                'auth/too-many-requests': 'Muitas tentativas. Aguarde uns minutos.',
+                'auth/network-request-failed': 'Erro de ligação. Verifique a internet.',
+                'auth/email-already-in-use': 'Este e-mail já está registado.',
+                'auth/weak-password': 'A palavra-passe precisa de pelo menos 6 caracteres.'
+            };
+            return mensagens[error?.code] || `Não foi possível concluir o ${contexto}: ${error?.message || 'erro desconhecido'}`;
+        }
+
+        window.__efetuarRegistro = async function efetuarRegistro() {
+            const nomeEl = document.getElementById('reg-nome');
+            const usuarioEl = document.getElementById('reg-usuario');
+            const senhaEl = document.getElementById('reg-senha');
+            const botao = document.querySelector('[data-action="firebase-register"]');
+
+            const nome = nomeEl ? nomeEl.value.trim() : '';
+            const usuario = usuarioEl ? usuarioEl.value.trim().toLowerCase() : '';
+            const senha = senhaEl ? senhaEl.value : '';
+            const escalaOpcao = document.querySelector('input[name="escala-opcao"]:checked');
+            const escala = escalaOpcao ? escalaOpcao.value : 'A';
+
+            if (!nome || !usuario || !senha) {
+                return showToast('Por favor, preencha todos os campos.', 'error');
+            }
+            if (!usuario.includes('@') || !usuario.includes('.')) {
+                return showToast('Informe um e-mail válido.', 'warning');
+            }
+            if (senha.length < 6) {
+                return showToast('A palavra-passe deve ter pelo menos 6 caracteres.', 'warning');
+            }
+            if (!(await garantirFirebaseDisponivel())) return;
+
+            controlarBotaoAuth(botao, true, '<i class="fa-solid fa-user-plus"></i> Finalizar Cadastro');
+
+            try {
+                const timeoutAuth = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('timeout_auth')), 12000)
+                );
+
+                const cred = await Promise.race([
+                    window.firebaseCreateUserWithEmailAndPassword(window.firebaseAuth, usuario, senha),
+                    timeoutAuth
+                ]);
+
+                window.currentUserUid = cred.user.uid;
+                window.firebaseCurrentUser = cred.user;
+
+                const perfil = {
+                    nome,
+                    usuario,
+                    email: usuario,
+                    escala,
+                    criadoEm: window.firebaseServerTimestamp()
+                };
+
+                try {
+                    await Promise.race([
+                        window.firebaseSetDoc(
+                            window.firebaseDoc(window.firebaseDb, 'users', cred.user.uid),
+                            perfil,
+                            { merge: true }
+                        ),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout_db')), 6000))
+                    ]);
+                } catch (dbErr) {
+                    console.warn('Aviso: Perfil base mantido em memória local.', dbErr);
+                }
+
+                usuarioLogadoAtual = { uid: cred.user.uid, ...perfil };
+
+                if (nomeEl) nomeEl.value = '';
+                if (usuarioEl) usuarioEl.value = '';
+                if (senhaEl) senhaEl.value = '';
+
+                showToast(`Registo bem-sucedido! Bem-vindo(a), ${nome}!`, 'success');
+                iniciarAplicacaoAposAuth();
+
+            } catch (error) {
+                if (error.message === 'timeout_auth') {
+                    showToast('O servidor demorou a responder. Verifique a ligação.', 'error');
+                } else {
+                    showToast(mensagemErroAuth(error, 'registo'), 'error');
+                }
+            } finally {
+                controlarBotaoAuth(botao, false, '<i class="fa-solid fa-user-plus"></i> Finalizar Cadastro');
+            }
+        };
+
+        window.__efetuarLogin = async function efetuarLogin() {
+            const usuarioEl = document.getElementById('login-usuario');
+            const senhaEl = document.getElementById('login-senha');
+            const lembrarEl = document.getElementById('login-lembrar');
+            const botao = document.querySelector('button[onclick="efetuarLogin()"]');
+
+            const usuarioInput = usuarioEl ? usuarioEl.value.trim().toLowerCase() : '';
+            const senhaInput = senhaEl ? senhaEl.value : '';
+            const lembrarMe = lembrarEl ? lembrarEl.checked : false;
+
+            if (!usuarioInput || !senhaInput) {
+                return showToast('Informe o e-mail e a palavra-passe.', 'warning');
+            }
+            if (!(await garantirFirebaseDisponivel())) return;
+
+            controlarBotaoAuth(botao, true, '<i class="fa-solid fa-right-to-bracket"></i> Entrar no Sistema');
+
+            try {
+                await window.firebaseAuth.setPersistence(
+                    lembrarMe ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION
+                );
+
+                const cred = await window.firebaseSignInWithEmailAndPassword(
+                    window.firebaseAuth,
+                    usuarioInput,
+                    senhaInput
+                );
+
+                window.currentUserUid = cred.user.uid;
+                window.firebaseCurrentUser = cred.user;
+
+                let perfil = {
+                    nome: cred.user.email,
+                    usuario: cred.user.email,
+                    email: cred.user.email,
+                    escala: 'A'
+                };
+
+                try {
+                    const perfilSnap = await window.firebaseGetDoc(
+                        window.firebaseDoc(window.firebaseDb, 'users', cred.user.uid)
+                    );
+                    if (perfilSnap.exists()) perfil = { ...perfil, ...perfilSnap.data() };
+                } catch (perfilError) {
+                    console.warn('Não foi possível carregar o perfil do utilizador online.', perfilError);
+                }
+
+                usuarioLogadoAtual = { uid: cred.user.uid, ...perfil };
+                localStorage.setItem('preferencia_lembrar_expedicao', lembrarMe ? '1' : '0');
+
+                showToast(`Bem-vindo, ${usuarioLogadoAtual.nome}!`, 'success');
+                iniciarAplicacaoAposAuth();
+            } catch (error) {
+                showToast(mensagemErroAuth(error, 'login'), 'error');
+            } finally {
+                controlarBotaoAuth(botao, false, '<i class="fa-solid fa-right-to-bracket"></i> Entrar no Sistema');
+            }
+        };
+
+        async function obterUsuarioSessaoPersistida() {
+            if (!window.firebaseAuth) return null;
+            try { await window.firebaseAuthReady; } catch (e) {}
+            return window.firebaseAuth.currentUser || null;
+        }
+
+        window.__efetuarLogout = async function efetuarLogout() {
+            try {
+                if (window._unsubscribeFirestore) {
+                    window._unsubscribeFirestore();
+                    window._unsubscribeFirestore = null;
+                }
+                await window.firebaseSignOut(window.firebaseAuth);
+            } catch (error) { }
+
+            usuarioLogadoAtual = null;
+            bancoDeDados = [];
+            listaColaboradores = [];
+
+            document.getElementById('main-app').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('main-app').style.display = 'none';
+                document.getElementById('auth-screen').style.display = 'flex';
+                setTimeout(() => {
+                    document.getElementById('auth-screen').style.opacity = '1';
+                }, 50);
+            }, 300);
+
+            showToast('Sessão encerrada com sucesso.', 'success');
+        }
+
+        function atualizarUIUsuario() {
+            if (!usuarioLogadoAtual) return;
+
+            const nome = usuarioLogadoAtual.nome;
+            const inicial = nome.charAt(0).toUpperCase();
+            
+            document.getElementById('user-avatar').innerText = inicial;
+            document.getElementById('user-display-name').innerText = nome;
+            document.getElementById('user-display-login').innerText = `@${usuarioLogadoAtual.usuario}`;
+            document.getElementById('user-display-escala').innerText = `Escala ${usuarioLogadoAtual.escala}`;
+
+            document.getElementById('mobile-user-name').innerText = nome.split(' ')[0];
+            document.getElementById('mobile-user-escala').innerText = usuarioLogadoAtual.escala;
+        }
+
+        function chaveCacheUsuario(uid) {
+            return uid ? `expedicao_cache_${uid}` : null;
+        }
+
+        function salvarCacheLocalUsuario(uid) {
+            if (!uid) return;
+            try {
+                localStorage.setItem(chaveCacheUsuario(uid), JSON.stringify({
+                    uid,
+                    nome: usuarioLogadoAtual?.nome || '',
+                    usuario: usuarioLogadoAtual?.usuario || '',
+                    email: usuarioLogadoAtual?.email || '',
+                    escala: usuarioLogadoAtual?.escala || 'A',
+                    registros: bancoDeDados,
+                    colaboradores: listaColaboradores,
+                    atualizadoEm: new Date().toISOString()
+                }));
+            } catch (e) {
+                console.warn('Não foi possível atualizar o cache local.', e);
+            }
+        }
+
+        function carregarCacheLocalUsuario(uid) {
+            if (!uid) return false;
+            try {
+                const bruto = localStorage.getItem(chaveCacheUsuario(uid));
+                if (!bruto) return false;
+                const cache = JSON.parse(bruto);
+                if (!cache || cache.uid !== uid) return false;
+
+                if (Array.isArray(cache.registros)) bancoDeDados = cache.registros;
+                if (Array.isArray(cache.colaboradores)) listaColaboradores = cache.colaboradores;
+
+                usuarioLogadoAtual = {
+                    ...(usuarioLogadoAtual || {}),
+                    uid,
+                    nome: cache.nome || usuarioLogadoAtual?.nome || 'Usuário',
+                    usuario: cache.usuario || usuarioLogadoAtual?.usuario || '',
+                    email: cache.email || usuarioLogadoAtual?.email || '',
+                    escala: cache.escala || usuarioLogadoAtual?.escala || 'A'
+                };
+                atualizarListaDatasComEscala();
+                return true;
+            } catch (e) {
+                console.warn('Cache local da conta inválido.', e);
+                return false;
+            }
+        }
+
+        async function comTimeout(promise, ms, mensagem) {
+            let timer;
+            const timeout = new Promise((_, reject) => {
+                timer = setTimeout(() => reject(new Error(mensagem || 'Operação excedeu o tempo limite.')), ms);
+            });
+            try {
+                return await Promise.race([promise, timeout]);
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+
+        async function prepararDadosDoUsuarioAtual() {
+            const user = window.firebaseCurrentUser || (window.firebaseAuth && window.firebaseAuth.currentUser);
+            if (!user || !window.firebaseDb) {
+                const erro = new Error('Usuário ou Firebase indisponível.');
+                erro.code = 'firebase-unavailable';
+                throw erro;
+            }
+
+            window.currentUserUid = user.uid;
+            window.firebaseCurrentUser = user;
+
+            if (window.firestorePersistenceReady) {
+                try { await window.firestorePersistenceReady; } catch (e) {}
+            }
+
+            const ref = window.firebaseDoc(window.firebaseDb, 'users', user.uid);
+            let snap;
+
+            try {
+                snap = await comTimeout(
+                    window.firebaseGetDoc(ref),
+                    12000,
+                    'O Firestore demorou para responder.'
+                );
+            } catch (serverError) {
+                try {
+                    snap = await comTimeout(
+                        ref.get({ source: 'cache' }),
+                        3000,
+                        'O cache do Firestore não está disponível.'
+                    );
+                } catch (cacheError) {
+                    serverError.code = serverError.code || cacheError.code || 'firestore-unavailable';
+                    throw serverError;
+                }
+            }
+
+            const dados = snap.exists() ? (snap.data() || {}) : {};
+            const registrosAntigos = Array.isArray(dados.escala) ? dados.escala : [];
+            const registrosAtuais = Array.isArray(dados.registros) ? dados.registros : registrosAntigos;
+            const escalaPerfil = typeof dados.escala === 'string' ? dados.escala : 'A';
+
+            usuarioLogadoAtual = {
+                uid: user.uid,
+                nome: dados.nome || user.displayName || user.email || 'Usuário',
+                usuario: dados.usuario || user.email || '',
+                email: dados.email || user.email || '',
+                escala: escalaPerfil
+            };
+
+            bancoDeDados = Array.isArray(registrosAtuais) ? registrosAtuais : [];
+            listaColaboradores = Array.isArray(dados.colaboradores) ? dados.colaboradores : [];
+            atualizarListaDatasComEscala();
+            salvarCacheLocalUsuario(user.uid);
+
+            if (!snap.exists()) {
+                try {
+                    await comTimeout(
+                        window.firebaseSetDoc(ref, {
+                            uid: user.uid,
+                            nome: usuarioLogadoAtual.nome,
+                            usuario: usuarioLogadoAtual.usuario,
+                            email: usuarioLogadoAtual.email,
+                            escala: usuarioLogadoAtual.escala,
+                            colaboradores: [],
+                            registros: [],
+                            criadoEm: window.firebaseServerTimestamp(),
+                            updatedAt: window.firebaseServerTimestamp()
+                        }, { merge: true }),
+                        10000,
+                        'Não foi possível criar o perfil da conta.'
+                    );
+                } catch (createError) {
+                    console.warn('Perfil ainda não pôde ser criado no Firestore. A sessão continuará com o UID atual.', createError);
+                }
+
+                bancoDeDados = [];
+                listaColaboradores = [];
+                atualizarListaDatasComEscala();
+                salvarCacheLocalUsuario(user.uid);
+            }
+
+            escutarDadosFirestore();
+            return usuarioLogadoAtual;
+        }
+
+        async function sincronizarDadosUsuario(silencioso = false) {
+            const user = window.firebaseAuth?.currentUser || window.firebaseCurrentUser;
+            const uid = user?.uid || window.currentUserUid;
+            const icon = document.getElementById('icone-sincronizar-global');
+            const btn = document.getElementById('btn-sincronizar-global');
+            const state = document.getElementById('session-sync-state');
+
+            if (!uid) {
+                if (!silencioso) showToast('Nenhuma conta autenticada para sincronizar.', 'warning');
+                return false;
+            }
+
+            if (icon) icon.classList.add('fa-spin');
+            if (btn) { btn.disabled = true; btn.classList.add('opacity-60'); }
+            if (state) state.textContent = 'Sincronizando...';
+
+            try {
+                window.currentUserUid = uid;
+                window.firebaseCurrentUser = user;
+
+                try {
+                    await prepararDadosDoUsuarioAtual();
+                } catch (dbError) {
+                    console.warn('Sincronização online indisponível. Utilizando o cache local seguro:', dbError);
+                    carregarCacheLocalUsuario(uid);
+                }
+
+                carregarBanco();
+                atualizarUIUsuario();
+                renderizarCardsAtividades();
+                renderizarTabelaEquipe();
+                renderizarHistorico();
+                renderizarDashboard();
+
+                if (state) state.textContent = 'Atualizado';
+                if (!silencioso) showToast('Dados sincronizados com sucesso!', 'success');
+                return true;
+            } catch (error) {
+                console.error('Erro na sincronização:', error);
+                if (state) state.textContent = 'Modo local';
+                if (!silencioso) showToast('Dados atualizados com o cache local da conta.', 'info');
+                return false;
+            } finally {
+                if (icon) icon.classList.remove('fa-spin');
+                if (btn) { btn.disabled = false; btn.classList.remove('opacity-60'); }
+            }
+        }
+
+        async function iniciarAplicacaoAposAuth() {
+            const user = window.firebaseCurrentUser || (window.firebaseAuth && window.firebaseAuth.currentUser);
+            if (!user) return false;
+
+            window.currentUserUid = user.uid;
+            window.firebaseCurrentUser = user;
+
+            let dadosNuvemCarregados = false;
+            try {
+                await prepararDadosDoUsuarioAtual();
+                dadosNuvemCarregados = true;
+            } catch (error) {
+                console.warn('Iniciando com o cache da conta local:', error);
+
+                const cacheOk = carregarCacheLocalUsuario(user.uid);
+
+                if (!usuarioLogadoAtual) {
+                    usuarioLogadoAtual = {
+                        uid: user.uid,
+                        nome: user.displayName || user.email || 'Usuário',
+                        usuario: user.email || '',
+                        email: user.email || '',
+                        escala: 'A'
+                    };
+                }
+
+                bancoDeDados = Array.isArray(bancoDeDados) ? bancoDeDados : [];
+                listaColaboradores = Array.isArray(listaColaboradores) ? listaColaboradores : [];
+                atualizarListaDatasComEscala();
+
+                if (!cacheOk && bancoDeDados.length === 0) {
+                    showToast('Sessão iniciada no modo local.', 'info');
+                }
+            }
+
+            atualizarUIUsuario();
+
+            const authScreen = document.getElementById('auth-screen');
+            const mainApp = document.getElementById('main-app');
+            if (!authScreen || !mainApp) return dadosNuvemCarregados;
+
+            authScreen.style.opacity = '0';
+            await new Promise(resolve => setTimeout(resolve, 250));
+            authScreen.style.display = 'none';
+            document.body.style.overflow = 'auto';
+            mainApp.style.display = 'flex';
+            mainApp.style.opacity = '1';
+
+            inicializarSistema();
+            renderizarCardsAtividades();
+            renderizarTabelaEquipe();
+            renderizarDashboard();
+
+            return dadosNuvemCarregados;
+        }
+
+        window.onload = async () => {
+            initAIBrainAnimation();
+
+            const timeToLoad = 15000;
+            const startTime = performance.now();
+            const progressBar = document.getElementById('loading-bar');
+            const progressText = document.getElementById('loading-percent');
+
+            function atualizarProgresso(agora) {
+                const decorrido = agora - startTime;
+                const percentual = Math.min((decorrido / timeToLoad) * 100, 100);
+                const inteiro = Math.min(Math.floor(percentual), 100);
+                progressBar.style.width = `${percentual.toFixed(2)}%`;
+                progressText.innerText = inteiro;
+
+                if (decorrido < timeToLoad) {
+                    requestAnimationFrame(atualizarProgresso);
+                    return;
+                }
+
+                progressBar.style.width = '100%';
+                progressText.innerText = '100';
+                finalizarIntro();
+            }
+
+            async function finalizarIntro() {
+                const introScreen = document.getElementById('intro-screen');
+                const authScreen = document.getElementById('auth-screen');
+                const sessionScreen = document.getElementById('session-loading-screen');
+                const sessionName = document.getElementById('session-loading-name');
+
+                introScreen.style.opacity = '0';
+                await new Promise(resolve => setTimeout(resolve, 350));
+                introScreen.style.display = 'none';
+
+                let usuarioSessao = null;
+                try {
+                    usuarioSessao = await obterUsuarioSessaoPersistida();
+                } catch (error) { }
+
+                if (!usuarioSessao) {
+                    authScreen.style.display = 'flex';
+                    requestAnimationFrame(() => { authScreen.style.opacity = '1'; });
+                    return;
+                }
+
+                sessionScreen.style.display = 'flex';
+                sessionScreen.style.opacity = '1';
+                sessionName.textContent = usuarioSessao.email || 'Usuário salvo';
+
+                window.currentUserUid = usuarioSessao.uid;
+                window.firebaseCurrentUser = usuarioSessao;
+
+                await iniciarAplicacaoAposAuth();
+
+                sessionScreen.style.opacity = '0';
+                setTimeout(() => {
+                    sessionScreen.style.display = 'none';
+                }, 350);
+            }
+
+            requestAnimationFrame(atualizarProgresso);
+        };
+
+        const atividades = ['Puxada', 'Carregamento', 'Empilhamento', '5S', 'Padock', 'Final de esteira'];
+
+        function inicializarSistema() {
+            const hoje = new Date().toISOString().split('T')[0];
+            document.getElementById('data-escala').value = hoje;
+            carregarBanco();
+            renderizarCardsAtividades();
+        }
+
+        const titulos = {
+            'tab-lancar': 'Lançamento de Escala',
+            'tab-tv': 'Apresentação (TV)',
+            'tab-dashboard': 'Dashboard de Atividades',
+            'tab-historico': 'Histórico de Lançamentos',
+            'tab-equipe': 'Gerenciamento da Equipe'
+        };
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            
+            document.querySelectorAll('aside nav button').forEach(btn => {
+                btn.classList.remove('active', 'bg-gradient-to-r', 'from-blue-600', 'to-blue-700', 'text-white', 'shadow-md');
+            });
+            const activeBtn = document.getElementById(tabId.replace('tab', 'btn'));
+            if(activeBtn) activeBtn.classList.add('active');
+            
+            document.querySelectorAll('.bottom-nav-item').forEach(btn => btn.classList.remove('active'));
+            const activeNavMobile = document.getElementById(tabId.replace('tab', 'nav'));
+            if(activeNavMobile) activeNavMobile.classList.add('active');
+            
+            document.getElementById('page-title').innerText = titulos[tabId];
+
+            if(tabId === 'tab-lancar') renderizarCardsAtividades();
+            if(tabId === 'tab-historico') renderizarHistorico();
+            if(tabId === 'tab-tv') prepararNavegacaoTV();
+            if(tabId === 'tab-equipe') renderizarTabelaEquipe();
+            if(tabId === 'tab-dashboard') { carregarBanco(); setTimeout(renderizarDashboard, 150); }
+        }
+
+        async function salvarBanco() {
+            atualizarListaDatasComEscala();
+
+            const authUser = window.firebaseAuth && window.firebaseAuth.currentUser;
+            const user = authUser || window.firebaseCurrentUser;
+            const uid = user?.uid || null;
+
+            if (!uid) {
+                showToast('Nenhuma conta autenticada para salvar.', 'warning');
+                return false;
+            }
+
+            window.currentUserUid = uid;
+            window.firebaseCurrentUser = authUser;
+
+            try {
+                const userDocRef = window.firebaseDoc(window.firebaseDb, 'users', uid);
+                await comTimeout(
+                    window.firebaseSetDoc(userDocRef, {
+                        uid,
+                        nome: usuarioLogadoAtual?.nome || authUser?.displayName || authUser?.email || 'Usuário',
+                        usuario: usuarioLogadoAtual?.usuario || authUser?.email || '',
+                        email: usuarioLogadoAtual?.email || authUser?.email || '',
+                        escala: usuarioLogadoAtual?.escala || 'A',
+                        registros: bancoDeDados,
+                        colaboradores: listaColaboradores,
+                        updatedAt: window.firebaseServerTimestamp()
+                    }, { merge: true }),
+                    12000,
+                    'O Firestore demorou para salvar.'
+                );
+
+                salvarCacheLocalUsuario(uid);
+                return true;
+            } catch (e) {
+                console.warn('Gravado prioritariamente no cache local da conta:', e);
+                salvarCacheLocalUsuario(uid);
+                return true;
+            }
+        }
+
+        function carregarBanco() {
+            atualizarListaDatasComEscala();
+            const total = document.getElementById('dash-total-colabs');
+            if (total) total.innerText = listaColaboradores.length;
+        }
+
+        function atualizarListaDatasComEscala() {
+            const datasUnicas = [...new Set(bancoDeDados.map(r => r.data))];
+            datasComEscala = datasUnicas.sort((a, b) => new Date(a) - new Date(b));
+        }
+
+        function selecionarTodos(atividade) {
+            const chks = document.querySelectorAll(`input[name="chk-${atividade}"]`);
+            if (chks.length === 0) return showToast('Nenhum colaborador na equipe.', 'warning');
+            const todosMarcados = Array.from(chks).every(chk => chk.checked);
+            
+            chks.forEach(chk => {
+                chk.checked = !todosMarcados; 
+                toggleEstiloRow(chk.closest('.checkbox-container'));
+            });
+            atualizarContadorCard(atividade);
+            if(!todosMarcados) showToast(`Toda a equipe selecionada para ${atividade}`, 'success');
+        }
+
+        
+function atualizarBloqueioColaboradores() {
+    const selecionados = new Set();
+
+    document.querySelectorAll('#painel-atividades input[type="checkbox"]:checked').forEach(chk => {
+        selecionados.add(chk.value);
+    });
+
+    document.querySelectorAll('#painel-atividades input[type="checkbox"]').forEach(chk => {
+        const label = chk.closest('label');
+        const estaMarcado = chk.checked;
+
+        if (selecionados.has(chk.value) && !estaMarcado) {
+            chk.disabled = true;
+            label.style.backgroundColor = '#e5e7eb';
+            label.style.opacity = '0.55';
+            label.style.cursor = 'not-allowed';
+        } else {
+            chk.disabled = false;
+            label.style.backgroundColor = '';
+            label.style.opacity = '';
+            label.style.cursor = 'pointer';
+        }
+    });
+}
+
+function renderizarCardsAtividades() {
+            const painel = document.getElementById('painel-atividades');
+            painel.innerHTML = '';
+            const colsOrd = [...listaColaboradores].sort();
+
+            const estilosCard = {
+                'Puxada': { bg: 'bg-blue-50', border: 'border-blue-100', text: 'text-blue-700', badge: 'bg-blue-200 text-blue-800' },
+                'Carregamento': { bg: 'bg-red-50', border: 'border-red-100', text: 'text-red-700', badge: 'bg-red-200 text-red-800' },
+                'Empilhamento': { bg: 'bg-emerald-50', border: 'border-emerald-100', text: 'text-emerald-700', badge: 'bg-emerald-200 text-emerald-800' },
+                '5S': { bg: 'bg-amber-50', border: 'border-amber-100', text: 'text-amber-700', badge: 'bg-amber-200 text-amber-800' },
+                'Padock': { bg: 'bg-indigo-50', border: 'border-indigo-100', text: 'text-indigo-700', badge: 'bg-indigo-200 text-indigo-800' }
+            };
+
+            atividades.forEach(ativ => {
+                const style = estilosCard[ativ] || estilosCard['Puxada'];
+                
+                let htmlList = '';
+                if (colsOrd.length === 0) {
+                    htmlList = `<p class="text-xs text-slate-400 text-center py-6 italic">Nenhum colaborador cadastrado. Vá até a aba "Equipe" para adicionar.</p>`;
+                } else {
+                    htmlList = colsOrd.map((c) => `
+                        <label class="checkbox-container colab-row text-xs md:text-sm text-slate-600 font-medium" onclick="toggleEstiloRow(this)">
+                            <input type="checkbox" name="chk-${ativ}" value="${c}" onchange="atualizarContadorCard('${ativ}'); atualizarPreEscala(); atualizarBloqueioColaboradores();">
+                            <span class="checkmark"></span>
+                            <span class="truncate leading-tight">${c}</span>
+                        </label>
+                    `).join('');
+                }
+
+                const card = `
+                    <div class="card-soft overflow-hidden flex flex-col">
+                        <div class="${style.bg} border-b ${style.border} p-4 md:p-5 flex justify-between items-center">
+                            <div class="flex items-center gap-3">
+                                <h3 class="font-bold ${style.text} text-base md:text-lg flex items-center gap-2">
+                                    <i class="fa-solid fa-clipboard-check opacity-70"></i> ${ativ}
+                                </h3>
+                                <button onclick="selecionarTodos('${ativ}')" title="Marcar/Desmarcar Todos" class="text-slate-400 hover:${style.text} bg-white rounded-md px-2 py-1 shadow-sm border border-slate-200 text-xs transition-colors active:scale-95">
+                                    <i class="fa-solid fa-check-double"></i>
+                                </button>
+                            </div>
+                            <span class="${style.badge} text-xs font-bold px-2 py-1 md:px-3 md:py-1.5 rounded-lg shadow-sm" id="count-${ativ}">0</span>
+                        </div>
+                        <div class="p-2 md:p-3 flex-1 colab-list">
+                            ${htmlList}
+                        </div>
+                    </div>
+                `;
+                painel.innerHTML += card;
+            });
+            atualizarBloqueioColaboradores();
+        }
+
+        function toggleEstiloRow(label) {
+            setTimeout(() => {
+                const input = label.querySelector('input');
+                if(input && input.checked) label.classList.add('selected');
+                else if(input) label.classList.remove('selected');
+            }, 10);
+        }
+
+        
+function atualizarPreEscala() {
+    const painel = document.getElementById('pre-escala-lista');
+    if (!painel) return;
+
+    let grupos = [];
+
+    atividades.forEach(ativ => {
+        const selecionados = Array.from(
+            document.querySelectorAll(`input[name="chk-${ativ}"]:checked`)
+        ).map(chk => chk.value);
+
+        if (selecionados.length) {
+            grupos.push(`
+                <div class="bg-white rounded-xl border border-slate-200 p-3 shadow-sm">
+                    <div class="font-bold text-blue-700 mb-2">
+                        <i class="fa-solid fa-list-check"></i> ${ativ}
+                    </div>
+                    <div class="space-y-1">
+                        ${selecionados.map(nome => `
+                            <div class="text-sm text-slate-700 flex items-center gap-2">
+                                <i class="fa-solid fa-user text-xs text-slate-400"></i>${nome}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `);
+        }
+    });
+
+    painel.innerHTML = grupos.length 
+        ? grupos.join('') 
+        : '<p class="text-sm text-slate-400">Nenhum colaborador selecionado.</p>';
+}
+
+function atualizarContadorCard(ativ) {
+            const chks = document.querySelectorAll(`input[name="chk-${ativ}"]:checked`);
+            document.getElementById(`count-${ativ}`).innerText = chks.length;
+        }
+
+        async function salvarEscalaLote() {
+            const data = document.getElementById('data-escala').value;
+            if(!data) return showToast('Selecione uma data primeiro!', 'error');
+
+            const user = window.firebaseCurrentUser || (window.firebaseAuth && window.firebaseAuth.currentUser);
+            if (!user) return showToast('Faça login antes de salvar a escala.', 'warning');
+
+            const bancoAnterior = [...bancoDeDados];
+
+            // Bloqueia lançamento duplicado para a mesma data
+            if (bancoDeDados.some(r => r.data === data)) {
+                return showToast('Já existe uma escala lançada para esta data!', 'error');
+            }
+
+            const timestamp = new Date().toLocaleString('pt-BR');
+            let lancamentos = 0;
+
+            atividades.forEach(ativ => {
+                const chks = document.querySelectorAll(`input[name="chk-${ativ}"]:checked`);
+                chks.forEach(chk => {
+                    bancoDeDados.push({
+                        id: `${user.uid}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
+                        uid: user.uid,
+                        data, colaborador: chk.value, atividade: ativ, turno: '2º Turno', registro: timestamp
+                    });
+                    lancamentos++;
+                });
+            });
+
+            if (lancamentos === 0) return showToast('Selecione ao menos um colaborador.', 'warning');
+
+            const salvo = await salvarBanco();
+            if (!salvo) {
+                bancoDeDados = bancoAnterior;
+                atualizarListaDatasComEscala();
+                return;
+            }
+
+            document.querySelectorAll('input[type="checkbox"][name^="chk-"]:checked').forEach(chk => {
+                chk.checked = false;
+                chk.closest('.checkbox-container')?.classList.remove('selected');
+            });
+            atividades.forEach(atualizarContadorCard);
+            atualizarPreEscala();
+            renderizarHistorico();
+            renderizarDashboard();
+            showToast(`${lancamentos} escalas salvas!`, 'success');
+
+            const btnPC = document.getElementById('btn-salvar');
+            if(btnPC) {
+                const originalClass = btnPC.className;
+                btnPC.className = 'hidden md:flex w-full md:w-auto bg-gradient-to-r from-emerald-500 to-green-600 text-white px-8 py-3.5 rounded-xl font-bold shadow-lg transform scale-105 items-center gap-3';
+                document.getElementById('texto-btn-salvar').innerText = 'Escala Salva!';
+                setTimeout(() => { btnPC.className = originalClass; document.getElementById('texto-btn-salvar').innerText = 'Salvar Escala Diária'; }, 2500);
+            }
+        }
+
+        function renderizarTabelaEquipe() {
+            const tbody = document.getElementById('tabela-equipe');
+            const busca = document.getElementById('busca-equipe').value.toLowerCase();
+            tbody.innerHTML = '';
+            
+            const colabsFiltrados = listaColaboradores.filter(c => c.toLowerCase().includes(busca)).sort();
+
+            if (colabsFiltrados.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="2" class="p-6 text-center text-slate-400 text-sm">Nenhum colaborador encontrado na equipe.</td></tr>`;
+                return;
+            }
+
+            colabsFiltrados.forEach(c => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="p-3 md:p-4 font-medium text-slate-700 flex items-center gap-3">
+                            <div class="w-6 h-6 md:w-8 md:h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-[10px] md:text-xs flex-shrink-0">${c.charAt(0)}</div>
+                            <span class="truncate max-w-[200px] md:max-w-none">${c}</span>
+                        </td>
+                        <td class="p-3 md:p-4 text-center">
+                            <button onclick="removerColab('${c}')" class="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-all"><i class="fa-solid fa-trash-can"></i></button>
+                        </td>
+                    </tr>`;
+            });
+        }
+        
+        function abrirModalColab() { document.getElementById('modal-colab').classList.remove('hidden'); document.getElementById('novo-nome-colab').value = ''; setTimeout(() => document.getElementById('novo-nome-colab').focus(), 100); }
+        function fecharModalColab() { document.getElementById('modal-colab').classList.add('hidden'); }
+        
+        async function salvarNovoColab() {
+            const nome = document.getElementById('novo-nome-colab').value.trim();
+            if(!nome) return showToast('Digite um nome válido.', 'error');
+            const nomeFinal = nome.toUpperCase();
+            if(listaColaboradores.includes(nomeFinal)) return showToast('Colaborador já existe.', 'warning');
+
+            const anterior = [...listaColaboradores];
+            listaColaboradores.push(nomeFinal);
+            const salvo = await salvarBanco();
+            if (!salvo) {
+                listaColaboradores = anterior;
+                return;
+            }
+
+            fecharModalColab();
+            renderizarTabelaEquipe();
+            document.getElementById('dash-total-colabs').innerText = listaColaboradores.length;
+            showToast('Colaborador salvo com sucesso!', 'success');
+        }
+        
+        async function removerColab(nome) {
+            if(!confirm(`Tem certeza que deseja remover ${nome}?`)) return;
+
+            const anterior = [...listaColaboradores];
+            listaColaboradores = listaColaboradores.filter(c => c !== nome);
+            const salvo = await salvarBanco();
+            if (!salvo) {
+                listaColaboradores = anterior;
+                return;
+            }
+
+            renderizarTabelaEquipe();
+            document.getElementById('dash-total-colabs').innerText = listaColaboradores.length;
+            showToast('Colaborador removido!', 'success');
+        }
+
+        function prepararNavegacaoTV() {
+            if (datasComEscala.length === 0) {
+                document.getElementById('data-tv-exibicao').innerText = "Sem Escalas";
+                document.getElementById('container-tv').innerHTML = `<div class="col-span-full flex flex-col items-center justify-center py-10 md:py-20 text-slate-400"><i class="fa-solid fa-folder-open text-5xl mb-4 opacity-50"></i><p class="text-lg font-medium">Vazio.</p></div>`;
+                return;
+            }
+            document.getElementById('data-tv').value = datasComEscala[datasComEscala.length - 1];
+            carregarTelaTV();
+        }
+        
+        function navegarDataTV(direcao) {
+            if (datasComEscala.length === 0) return;
+            const inputData = document.getElementById('data-tv');
+            let indiceAtual = datasComEscala.indexOf(inputData.value);
+            indiceAtual = (indiceAtual === -1) ? datasComEscala.length - 1 : indiceAtual + direcao;
+            if (indiceAtual < 0) return showToast('Primeira escala.', 'warning');
+            if (indiceAtual >= datasComEscala.length) return showToast('Última escala.', 'warning');
+            inputData.value = datasComEscala[indiceAtual]; carregarTelaTV();
+        }
+        
+        function formatarDataBR(dataIso) {
+            if(!dataIso) return ""; const partes = dataIso.split('-'); return partes.length !== 3 ? dataIso : `${partes[2]}/${partes[1]}/${partes[0]}`;
+        }
+        
+        function carregarTelaTV() {
+            const container = document.getElementById('container-tv');
+            const dataSel = document.getElementById('data-tv').value;
+            document.getElementById('data-tv-exibicao').innerText = formatarDataBR(dataSel);
+            const registrosDia = bancoDeDados.filter(r => r.data === dataSel);
+            if(registrosDia.length === 0) { container.innerHTML = `<div class="col-span-full flex flex-col items-center justify-center py-10 text-slate-400"><i class="fa-regular fa-calendar-xmark text-5xl mb-4 opacity-50"></i><p class="text-lg">Nenhuma escala nesta data.</p></div>`; return; }
+            
+            const agrupado = {}; atividades.forEach(a => agrupado[a] = []);
+            registrosDia.forEach(reg => { if(agrupado[reg.atividade]) agrupado[reg.atividade].push(reg.colaborador); });
+            container.innerHTML = '';
+            atividades.forEach(ativ => {
+                if(agrupado[ativ].length > 0) {
+                    const lista = agrupado[ativ].map(nome => `<div class="bg-slate-50 border-l-4 border-blue-500 p-2 md:p-3 mb-2 rounded-r-lg font-semibold text-slate-700 text-xs md:text-sm flex items-center shadow-sm"><i class="fa-solid fa-user-check text-blue-500 mr-2"></i> <span class="truncate">${nome}</span></div>`).join('');
+                    container.innerHTML += `<div class="card-soft overflow-hidden border-0"><div class="bg-slate-800 p-3 text-white text-center font-bold uppercase tracking-widest text-xs md:text-sm z-10 relative">${ativ}</div><div class="p-3 md:p-5 bg-white">${lista}</div></div>`;
+                }
+            });
+        }
+
+        function renderizarHistorico(filtro = '') {
+            const tbody = document.getElementById('tabela-historico'); tbody.innerHTML = ''; document.getElementById('check-all-hist').checked = false; atualizarContadorExclusao();
+            let dadosExibicao = [...bancoDeDados].reverse();
+            if (filtro) { const f = filtro.toLowerCase(); dadosExibicao = dadosExibicao.filter(item => item.colaborador.toLowerCase().includes(f) || item.atividade.toLowerCase().includes(f) || item.data.includes(f)); }
+            dadosExibicao.forEach(row => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-blue-50/50 transition-colors">
+                        <td class="p-3 md:p-4 text-center"><input type="checkbox" class="chk-historico w-3 h-3 md:w-4 md:h-4 cursor-pointer" value="${row.id}" onchange="atualizarContadorExclusao()"></td>
+                        <td class="p-3 md:p-4 whitespace-nowrap">${formatarDataBR(row.data)}</td>
+                        <td class="p-3 md:p-4 font-bold max-w-[100px] truncate">${row.colaborador}</td>
+                        <td class="p-3 md:p-4"><span class="bg-slate-100 text-slate-600 px-2 py-1 rounded text-[10px] md:text-xs font-bold border">${row.atividade}</span></td>
+                        <td class="p-3 md:p-4 text-slate-500">${row.turno}</td>
+                    </tr>`;
+            });
+        }
+        function filtrarHistorico() { renderizarHistorico(document.getElementById('busca-historico').value); }
+        function toggleAllHistorico() { const isChecked = document.getElementById('check-all-hist').checked; document.querySelectorAll('.chk-historico').forEach(chk => chk.checked = isChecked); atualizarContadorExclusao(); }
+        function atualizarContadorExclusao() {
+            const count = document.querySelectorAll('.chk-historico:checked').length;
+            const btn = document.getElementById('btn-apagar-selecionados');
+            document.getElementById('cont-selecionados').innerText = count;
+            if(count > 0) { btn.classList.remove('hidden'); btn.classList.add('flex'); } else { btn.classList.add('hidden'); btn.classList.remove('flex'); }
+        }
+        function apagarHistoricosSelecionados() {
+            const chks = document.querySelectorAll('.chk-historico:checked'); if(chks.length === 0) return;
+            if(confirm(`Apagar ${chks.length} registros?`)) {
+                const idsRemover = Array.from(chks).map(chk => chk.value);
+                const anterior = [...bancoDeDados];
+                bancoDeDados = bancoDeDados.filter(r => !idsRemover.includes(r.id));
+                salvarBanco().then((ok) => {
+                    if (ok) {
+                        renderizarHistorico(document.getElementById('busca-historico').value);
+                        renderizarDashboard();
+                        showToast(`${idsRemover.length} apagados.`, 'success');
+                    } else {
+                        bancoDeDados = anterior;
+                        renderizarHistorico(document.getElementById('busca-historico').value);
+                    }
+                });
+            }
+        }
+
+        async function sincronizarDashboard() {
+            const icon = document.getElementById('icone-sincronizar');
+            if (icon) icon.classList.add('fa-spin');
+            await sincronizarDadosUsuario(true);
+            renderizarDashboard();
+            if (icon) icon.classList.remove('fa-spin');
+            showToast('Dashboard sincronizado com sucesso!', 'success');
+        }
+
+        function renderizarDashboard(dadosFiltro = null) {
+            const dadosDashboard = dadosFiltro || bancoDeDados;
+            document.getElementById('dash-total-escalas').innerText = dadosDashboard.length;
+            const containerGrafico = document.getElementById('container-grafico');
+
+            if (dadosDashboard.length === 0) {
+                document.getElementById('dash-top-ativ').innerText = '-';
+                if(grafico) { grafico.destroy(); grafico = null; }
+                containerGrafico.innerHTML = '<div class="flex items-center justify-center h-full text-slate-400 text-sm">Sem dados.</div>';
+                return;
+            }
+
+            const freqAtiv = {};
+            dadosDashboard.forEach(r => { freqAtiv[r.atividade] = (freqAtiv[r.atividade] || 0) + 1; });
+            document.getElementById('dash-top-ativ').innerText = Object.keys(freqAtiv).sort((a,b)=>freqAtiv[b]-freqAtiv[a])[0] || '-';
+
+            if(grafico) { grafico.destroy(); grafico = null; }
+
+            const nomes = listaColaboradores.slice();
+            const limitePorGrafico = 12;
+            const grupos = [];
+
+            for(let i=0;i<nomes.length;i+=limitePorGrafico){
+                grupos.push(nomes.slice(i,i+limitePorGrafico));
+            }
+
+            if(!grupos.length) grupos.push([]);
+
+            containerGrafico.innerHTML = grupos.map((g,i)=>`
+                <div class="mb-8">
+                    <h4 class="font-bold text-slate-700 mb-3 text-sm">Dashboard ${i+1}</h4>
+                    <div style="height:320px; position:relative;">
+                        <canvas id="graficoAtividades${i}"></canvas>
+                    </div>
+                </div>
+            `).join('');
+
+            const cores = {
+                'Puxada':'#60a5fa',
+                'Carregamento':'#f87171',
+                'Empilhamento':'#34d399',
+                '5S':'#fbbf24',
+                'Padock':'#a78bfa',
+                'Final de esteira':'#22c55e'
+            };
+
+            grupos.forEach((grupo,index)=>{
+                const datasets = atividades.map(ativ=>({
+                    label:ativ,
+                    data:grupo.map(colab=>dadosDashboard.filter(r=>r.colaborador===colab && r.atividade===ativ).length),
+                    backgroundColor:cores[ativ] || '#94a3b8',
+                    borderRadius:4
+                }));
+
+                const ctx=document.getElementById(`graficoAtividades${index}`).getContext('2d');
+
+                new Chart(ctx,{
+                    type:'bar',
+                    data:{labels:grupo,datasets},
+                    options:{
+                        responsive:true,
+                        maintainAspectRatio:false,
+                        scales:{
+                            x:{
+                                stacked:true,
+                                ticks:{
+                                    maxRotation:0,
+                                    minRotation:0,
+                                    autoSkip:false,
+                                    font:{size:12}
+                                }
+                            },
+                            y:{stacked:true,beginAtZero:true,ticks:{stepSize:1}}
+                        },
+                        plugins:{
+                            legend:{labels:{usePointStyle:true}},
+                            tooltip:{
+                                mode:'index',
+                                intersect:false,
+                                callbacks:{
+                                    title:function(context){
+                                        return grupo[context[0].dataIndex];
+                                    },
+                                    label:function(context){
+                                        const colaborador = grupo[context.dataIndex];
+                                        const atividade = context.dataset.label;
+                                        const qtd = dadosDashboard.filter(r => r.colaborador === colaborador && r.atividade === atividade).length;
+                                        return atividade + ': ' + qtd;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+        }
+
+        
+function formatarDataDash(data){ return data.toISOString().split('T')[0]; }
+function filtrarDashboardPeriodo(){
+ const inicio=document.getElementById('dash-data-inicial').value;
+ const fim=document.getElementById('dash-data-final').value;
+ if(!inicio || !fim) return showToast('Selecione o período completo.','warning');
+ const filtrados=bancoDeDados.filter(r=>r.data>=inicio && r.data<=fim);
+ renderizarDashboard(filtrados);
+}
+function definirPeriodoDash(inicio,fim){
+ document.getElementById('dash-data-inicial').value=formatarDataDash(inicio);
+ document.getElementById('dash-data-final').value=formatarDataDash(fim);
+ filtrarDashboardPeriodo();
+}
+function dashHoje(){let d=new Date();definirPeriodoDash(d,d);}
+function dashUltimos7(){let f=new Date(),i=new Date();i.setDate(f.getDate()-7);definirPeriodoDash(i,f);}
+function dashMesAtual(){let f=new Date(),i=new Date(f.getFullYear(),f.getMonth(),1);definirPeriodoDash(i,f);}
+function dashMesAnterior(){let f=new Date(new Date().getFullYear(),new Date().getMonth(),0),i=new Date(f.getFullYear(),f.getMonth(),1);definirPeriodoDash(i,f);}
+
+function showToast(msg, type) {
+            const c = document.getElementById('toast-container');
+            const t = document.createElement('div'); t.className = `toast ${type}`;
+            t.innerHTML = `${type==='error' ? '<i class="fa-solid fa-circle-xmark text-xl"></i>' : (type==='warning' ? '<i class="fa-solid fa-triangle-exclamation text-xl"></i>' : '<i class="fa-solid fa-check-circle text-xl"></i>')} <span class="text-sm md:text-base">${msg}</span>`;
+            c.appendChild(t); setTimeout(() => t.classList.add('show'), 10); setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 400); }, 3000);
+        }
+        document.addEventListener('DOMContentLoaded', function(){
+            const campoColab = document.getElementById('novo-nome-colab');
+            if(campoColab){
+                campoColab.addEventListener('keydown', function(e){
+                    if(e.key === 'Enter'){
+                        e.preventDefault();
+                        salvarNovoColab();
+                    }
+                });
+            }
+        });
+
+    </script>
+
+    <script>
+    (function () {
+        window.alternarAuthScreen = function (tela) {
+            const login = document.getElementById('form-login');
+            const registro = document.getElementById('form-registro');
+
+            if (!login || !registro) return;
+
+            if (tela === 'registro') {
+                login.classList.add('hidden');
+                registro.classList.remove('hidden');
+            } else {
+                registro.classList.add('hidden');
+                login.classList.remove('hidden');
+            }
+        };
+
+        window.efetuarLogin = function () {
+            if (typeof window.__efetuarLogin === 'function') {
+                return window.__efetuarLogin();
+            }
+        };
+
+        window.efetuarRegistro = function () {
+            if (typeof window.__efetuarRegistro === 'function') {
+                return window.__efetuarRegistro();
+            }
+        };
+
+        window.efetuarLogout = function () {
+            if (typeof window.__efetuarLogout === 'function') {
+                return window.__efetuarLogout();
+            }
+        };
+
+        function ligarBotoes() {
+            const botao = document.querySelector('[data-action="firebase-register"]');
+            if (botao && botao.dataset.firebaseBound !== '1') {
+                botao.type = 'button';
+                botao.dataset.firebaseBound = '1';
+                botao.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    window.efetuarRegistro();
+                });
+            }
+
+            const loginUsuario = document.getElementById('login-usuario');
+            const loginSenha = document.getElementById('login-senha');
+            [loginUsuario, loginSenha].forEach((campo) => {
+                if (!campo || campo.dataset.enterBound === '1') return;
+                campo.dataset.enterBound = '1';
+                campo.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        window.efetuarLogin();
+                    }
+                });
+            });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', ligarBotoes);
+        } else {
+            ligarBotoes();
+        }
+    })();
+    </script>
+
+</body>
+</html>
